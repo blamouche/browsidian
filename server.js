@@ -195,7 +195,7 @@ async function main() {
         if (!vaultReal) {
           return json(res, 400, {
             error:
-              "Vault non configuré. Lance le serveur avec --vault /chemin/vers/vault, ou utilise 'Choisir un vault local' dans l'UI."
+              "No vault configured. Start the server with --vault /path/to/vault, or use 'Choose local vault' in the UI."
           });
         }
 

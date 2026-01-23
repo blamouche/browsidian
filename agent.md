@@ -1,7 +1,6 @@
-# Consigne
+# Instruction
 
-À chaque commit, mettre à jour systématiquement le numéro de version de l’application.
+On every commit, always update the application's version number.
 
-- Mettre à jour `version` dans `package.json`.
-- S’assurer que l’UI affiche la version via `/api/config` (champ `version`).
-
+- Update `version` in `package.json`.
+- Ensure the UI displays the version via `/api/config` (`version` field).

@@ -1,33 +1,33 @@
 # Obsidian Web
 
-Web app locale (sans dépendances) pour parcourir et modifier un dossier Obsidian directement dans le navigateur.
+Local web app (no dependencies) to browse and edit an Obsidian vault directly in the browser.
 
-## Prérequis
+## Requirements
 
-- Node.js 18+ (recommandé)
+- Node.js 18+ (recommended)
 
-## Lancer
+## Run
 
-Option A — mode serveur (le serveur lit/écrit sur disque) : choisis le chemin du vault Obsidian (le dossier qui contient tes notes) :
+Option A — server mode (the server reads/writes on disk): set your Obsidian vault path (the folder that contains your notes):
 
 ```bash
-export OBSIDIAN_VAULT="/chemin/vers/ton/vault"
+export OBSIDIAN_VAULT="/path/to/your/vault"
 npm start
 ```
 
-Ou :
+Or:
 
 ```bash
-node server.js --vault "/chemin/vers/ton/vault" --port 5173
+node server.js --vault "/path/to/your/vault" --port 5173
 ```
 
-Puis ouvre `http://127.0.0.1:5173`.
+Then open `http://127.0.0.1:5173`.
 
 ## Notes
 
-- Les endpoints `GET /api/list`, `GET /api/read`, `PUT /api/write` sont limités au vault (protection contre `..`).
-- Les dossiers `.obsidian`, `.git`, `node_modules` sont ignorés dans l’explorateur.
-- Option B — mode navigateur: lance le serveur sans vault puis clique sur **Choisir un vault local** (Chrome/Edge/Brave) pour travailler directement sur un dossier choisi via le navigateur.
-- L’éditeur fait une auto-sauvegarde après ~1s d’inactivité (et tu peux toujours faire Ctrl+S).
-- Drag & drop: tu peux déplacer un fichier en le glissant sur un dossier dans la barre de gauche (déplacement/rename).
-- En aperçu, les liens Obsidian `[[...]]` sont cliquables et ouvrent la note correspondante.
+- `GET /api/list`, `GET /api/read`, `PUT /api/write` are restricted to the vault (protection against `..`).
+- `.obsidian`, `.git`, `node_modules` are ignored in the file explorer.
+- Option B — browser mode: start the server without a vault, then click **Choose local vault** (Chrome/Edge/Brave) to work directly on a folder selected from the browser.
+- The editor auto-saves after ~1s of inactivity (you can still use Ctrl+S).
+- Drag & drop: move a file by dragging it onto a folder in the left sidebar (move/rename).
+- In preview mode, Obsidian links `[[...]]` are clickable and open the corresponding note.

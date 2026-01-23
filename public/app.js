@@ -141,7 +141,7 @@ async function openWikiLinkTarget(target) {
       await openFile(matches[0]);
       return;
     }
-    setStatus(`Lien introuvable: [[${target}]]`);
+    setStatus(`Link not found: [[${target}]]`);
     return;
   }
 
@@ -352,7 +352,7 @@ function renderMarkdownBasic(md) {
   closeList();
   closeBlockquote();
   if (inCode) html += `</code></pre>`;
-  if (!html) return `<div class="muted">Document vide. Clique pour éditer…</div>`;
+  if (!html) return `<div class="muted">Empty document. Click to edit…</div>`;
   return html;
 }
 
@@ -362,7 +362,7 @@ function showPreview() {
   const content = state.activeFile ? editorEl.value : "";
   previewEl.innerHTML = state.activeFile
     ? renderMarkdownBasic(content)
-    : `<div class="muted">Sélectionne un fichier à gauche…</div>`;
+    : `<div class="muted">Select a file on the left…</div>`;
 }
 
 function showEditor({ focus } = { focus: true }) {
@@ -378,7 +378,7 @@ function showVaultModal() {
   const supported = "showDirectoryPicker" in window;
   if (vaultChooseBtn) {
     vaultChooseBtn.disabled = !supported;
-    vaultChooseBtn.textContent = supported ? "Choisir un vault local" : "Choisir un vault local (Chrome/Edge/Brave)";
+    vaultChooseBtn.textContent = supported ? "Choose local vault" : "Choose local vault (Chrome/Edge/Brave)";
   }
   vaultDialog.showModal();
 }
@@ -402,7 +402,7 @@ function applyTheme(theme) {
 function setMode(nextMode) {
   state.mode = nextMode;
   selectVaultBtn.disabled = false;
-  selectVaultBtn.textContent = nextMode === "browser" ? "Changer de vault local" : "Choisir un vault local";
+  selectVaultBtn.textContent = nextMode === "browser" ? "Change local vault" : "Choose local vault";
   useServerBtn.hidden = nextMode !== "browser";
 }
 
@@ -455,7 +455,7 @@ function splitPath(relPath) {
 }
 
 async function getDirHandleByPath(dirRel, { create } = { create: false }) {
-  if (!state.rootHandle) throw new Error("Aucun vault local sélectionné");
+  if (!state.rootHandle) throw new Error("No local vault selected");
   let current = state.rootHandle;
   for (const part of splitPath(dirRel)) {
     current = await current.getDirectoryHandle(part, { create: Boolean(create) });
@@ -671,21 +671,21 @@ async function toggleDir(dir) {
     renderTree();
     return;
   }
-  setStatus(`Chargement: ${d || "/"}`);
+  setStatus(`Loading: ${d || "/"}`);
   await ensureDirLoaded(d);
   state.expandedDirs.add(d);
-  setStatus("Prêt.");
+  setStatus("Ready.");
   renderTree();
 }
 
 async function openFile(filePath) {
   if (!filePath) return;
   if (state.dirty) {
-    const ok = confirm("Tu as des modifications non sauvegardées. Continuer sans sauvegarder ?");
+    const ok = confirm("You have unsaved changes. Continue without saving?");
     if (!ok) return;
   }
   clearAutosaveTimer();
-  setStatus(`Ouverture: ${filePath}`);
+  setStatus(`Opening: ${filePath}`);
   const content = await readFile(filePath);
   state.activeFile = filePath;
   state.activeFileContent = content;
@@ -693,17 +693,17 @@ async function openFile(filePath) {
   setActivePath(filePath);
   setDirty(false);
   showPreview();
-  setStatus("Prêt.");
+  setStatus("Ready.");
   renderTree();
 }
 
 async function saveCurrent() {
   if (!state.activeFile) return;
-  setStatus("Sauvegarde…");
+  setStatus("Saving…");
   await writeFile(state.activeFile, editorEl.value);
   state.activeFileContent = editorEl.value;
   setDirty(false);
-  setStatus("Sauvegardé.");
+  setStatus("Saved.");
   showPreview();
 }
 
@@ -731,14 +731,14 @@ async function autosaveNow() {
   }
   state.autosaveInFlight = true;
   try {
-    setStatus("Auto-sauvegarde…");
+    setStatus("Auto-saving…");
     await writeFile(state.activeFile, editorEl.value);
     state.activeFileContent = editorEl.value;
     setDirty(false);
-    setStatus("Auto-sauvegardé.");
+    setStatus("Auto-saved.");
     if (document.activeElement !== editorEl) showPreview();
   } catch (err) {
-    setStatus(`Erreur auto-save: ${err.message}`);
+    setStatus(`Auto-save error: ${err.message}`);
   } finally {
     state.autosaveInFlight = false;
     if (state.autosaveQueued) {
@@ -778,46 +778,46 @@ function parentDirOf(pathStr) {
 async function createFolder() {
   const base = state.activeFile ? parentDirOf(state.activeFile) : "";
   const rel = await showPrompt({
-    title: "Nouveau dossier",
-    label: "Chemin (relatif au vault)",
-    help: "Exemple: Notes/Projets",
-    placeholder: base ? `${base}/Nouveau dossier` : "Nouveau dossier",
+    title: "New folder",
+    label: "Path (relative to the vault)",
+    help: "Example: Notes/Projects",
+    placeholder: base ? `${base}/New folder` : "New folder",
     value: base ? `${base}/` : ""
   });
   if (!rel) return;
-  setStatus("Création du dossier…");
+  setStatus("Creating folder…");
   await mkdir(rel);
   invalidateFileIndex();
   const parent = parentDirOf(rel);
   state.childrenByDir.delete(parent);
   await ensureDirLoaded(parent);
   state.expandedDirs.add(parent);
-  setStatus("Dossier créé.");
+  setStatus("Folder created.");
   renderTree();
 }
 
 async function createFile() {
   const base = state.activeFile ? parentDirOf(state.activeFile) : "";
   const rel = await showPrompt({
-    title: "Nouveau fichier",
-    label: "Chemin (relatif au vault)",
-    help: "Exemple: Notes/ma-note.md",
-    placeholder: base ? `${base}/nouveau.md` : "nouveau.md",
+    title: "New file",
+    label: "Path (relative to the vault)",
+    help: "Example: Notes/my-note.md",
+    placeholder: base ? `${base}/new.md` : "new.md",
     value: base ? `${base}/` : ""
   });
   if (!rel) return;
   if (!rel.toLowerCase().endsWith(".md")) {
-    const ok = confirm("Le fichier ne se termine pas par .md. Continuer ?");
+    const ok = confirm("The file does not end with .md. Continue?");
     if (!ok) return;
   }
-  setStatus("Création du fichier…");
+  setStatus("Creating file…");
   await writeFile(rel, "");
   invalidateFileIndex();
   const parent = parentDirOf(rel);
   state.childrenByDir.delete(parent);
   await ensureDirLoaded(parent);
   state.expandedDirs.add(parent);
-  setStatus("Fichier créé.");
+  setStatus("File created.");
   renderTree();
   await openFile(rel);
 }
@@ -831,7 +831,7 @@ treeEl.addEventListener("click", async (e) => {
     if (type === "dir") await toggleDir(p);
     else await openFile(p);
   } catch (err) {
-    setStatus(`Erreur: ${err.message}`);
+    setStatus(`Error: ${err.message}`);
   }
 });
 
@@ -886,11 +886,10 @@ treeEl.addEventListener("drop", async (e) => {
   const to = joinPath(normalizeDir(targetDir), basenameOf(from));
   if (to === from) return;
 
-  const ok = confirm(`Déplacer\n\n${from}\n\n→ ${to}\n\nConfirmer ?`);
-  if (!ok) return;
-
   try {
-    setStatus("Déplacement…");
+    const ok = confirm(`Move\n\n${from}\n\n→ ${to}\n\nConfirm?`);
+    if (!ok) return;
+    setStatus("Moving…");
     await moveFilePath(from, to);
     invalidateFileIndex();
     const fromParent = parentDirOf(from);
@@ -908,9 +907,9 @@ treeEl.addEventListener("drop", async (e) => {
     }
 
     renderTree();
-    setStatus("Déplacé.");
+    setStatus("Moved.");
   } catch (err) {
-    setStatus(`Erreur: ${err.message}`);
+    setStatus(`Error: ${err.message}`);
   } finally {
     state.draggingPath = null;
   }
@@ -937,7 +936,7 @@ previewEl.addEventListener("click", async (e) => {
       try {
         await openWikiLinkTarget(decodeURIComponent(wl));
       } catch (err) {
-        setStatus(`Erreur: ${err.message}`);
+        setStatus(`Error: ${err.message}`);
       }
     }
     return;
@@ -949,7 +948,7 @@ saveBtn.addEventListener("click", async () => {
   try {
     await saveCurrent();
   } catch (err) {
-    setStatus(`Erreur: ${err.message}`);
+    setStatus(`Error: ${err.message}`);
   }
 });
 
@@ -959,7 +958,7 @@ document.addEventListener("keydown", async (e) => {
     try {
       await saveCurrent();
     } catch (err) {
-      setStatus(`Erreur: ${err.message}`);
+      setStatus(`Error: ${err.message}`);
     }
   }
 });
@@ -973,7 +972,7 @@ newFolderBtn.addEventListener("click", async () => {
   try {
     await createFolder();
   } catch (err) {
-    setStatus(`Erreur: ${err.message}`);
+    setStatus(`Error: ${err.message}`);
   }
 });
 
@@ -981,7 +980,7 @@ newFileBtn.addEventListener("click", async () => {
   try {
     await createFile();
   } catch (err) {
-    setStatus(`Erreur: ${err.message}`);
+    setStatus(`Error: ${err.message}`);
   }
 });
 
@@ -1001,7 +1000,7 @@ function resetUiState() {
   state.dirty = false;
   state.filter = searchEl.value || "";
   editorEl.value = "";
-  previewEl.innerHTML = `<div class="muted">Sélectionne un fichier à gauche…</div>`;
+  previewEl.innerHTML = `<div class="muted">Select a file on the left…</div>`;
   previewEl.hidden = false;
   editorEl.hidden = true;
   setActivePath("");
@@ -1010,14 +1009,14 @@ function resetUiState() {
 
 async function selectLocalVault() {
   if (!("showDirectoryPicker" in window)) {
-    alert("Ton navigateur ne supporte pas la sélection de dossier (File System Access API). Essaie Chrome/Edge/Brave.");
+    alert("Your browser does not support folder selection (File System Access API). Try Chrome/Edge/Brave.");
     return;
   }
   if (state.dirty) {
-    const ok = confirm("Tu as des modifications non sauvegardées. Continuer sans sauvegarder ?");
+    const ok = confirm("You have unsaved changes. Continue without saving?");
     if (!ok) return;
   }
-  setStatus("Sélection du dossier…");
+  setStatus("Selecting folder…");
   const handle = await window.showDirectoryPicker({ mode: "readwrite" });
   state.rootHandle = handle;
   state.vaultLabel = handle?.name ? `${handle.name} (local)` : "Local";
@@ -1027,15 +1026,15 @@ async function selectLocalVault() {
   resetUiState();
   await ensureDirLoaded("");
   renderTree();
-  setStatus("Prêt.");
+  setStatus("Ready.");
 }
 
 async function switchToServerMode() {
   if (state.dirty) {
-    const ok = confirm("Tu as des modifications non sauvegardées. Continuer sans sauvegarder ?");
+    const ok = confirm("You have unsaved changes. Continue without saving?");
     if (!ok) return;
   }
-  setStatus("Déconnexion…");
+  setStatus("Disconnecting…");
   state.rootHandle = null;
   setMode("server");
   resetUiState();
@@ -1044,21 +1043,21 @@ async function switchToServerMode() {
   if (!cfg?.vault) {
     setVaultUiEnabled(false);
     treeEl.innerHTML = "";
-    setStatus("Sélectionne un vault local, ou démarre le serveur avec OBSIDIAN_VAULT/--vault.");
+    setStatus("Choose a local vault, or start the server with OBSIDIAN_VAULT/--vault.");
     showVaultModal();
     return;
   }
   setVaultUiEnabled(true);
   await ensureDirLoaded("");
   renderTree();
-  setStatus("Prêt.");
+  setStatus("Ready.");
 }
 
 selectVaultBtn.addEventListener("click", async () => {
   try {
     await selectLocalVault();
   } catch (err) {
-    setStatus(`Erreur: ${err.message}`);
+    setStatus(`Error: ${err.message}`);
   }
 });
 
@@ -1066,12 +1065,12 @@ useServerBtn.addEventListener("click", async () => {
   try {
     await switchToServerMode();
   } catch (err) {
-    setStatus(`Erreur: ${err.message}`);
+    setStatus(`Error: ${err.message}`);
   }
 });
 
 async function bootstrap() {
-  setStatus("Connexion au serveur…");
+  setStatus("Connecting to server…");
   const cfg = await apiGet("/api/config").catch(() => null);
   state.vaultLabel = cfg?.vault ? cfg.vault : "";
   vaultNameEl.textContent = state.vaultLabel ? `Vault: ${state.vaultLabel}` : "";
@@ -1080,14 +1079,14 @@ async function bootstrap() {
   if (!cfg?.vault) {
     setVaultUiEnabled(false);
     treeEl.innerHTML = "";
-    setStatus("Sélectionne un vault local, ou démarre le serveur avec OBSIDIAN_VAULT/--vault.");
+    setStatus("Choose a local vault, or start the server with OBSIDIAN_VAULT/--vault.");
     showVaultModal();
     return;
   }
   setVaultUiEnabled(true);
   await ensureDirLoaded("");
   renderTree();
-  setStatus("Prêt.");
+  setStatus("Ready.");
 }
 
 try {
@@ -1107,9 +1106,9 @@ if (vaultChooseBtn) {
       await selectLocalVault();
       if (vaultDialog?.open) vaultDialog.close();
     } catch (err) {
-      setStatus(`Erreur: ${err.message}`);
+      setStatus(`Error: ${err.message}`);
     }
   });
 }
 
-bootstrap().catch((err) => setStatus(`Erreur: ${err.message}`));
+bootstrap().catch((err) => setStatus(`Error: ${err.message}`));
