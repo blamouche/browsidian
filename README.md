@@ -27,24 +27,7 @@ It supports two working modes:
 
 ## Getting started
 
-### Option A — Server mode (recommended for full compatibility)
-
-Set the path of your Obsidian vault (the folder containing your notes):
-
-```bash
-export OBSIDIAN_VAULT="/path/to/your/vault"
-npm start
-```
-
-Then open `http://127.0.0.1:5173`.
-
-You can also run it explicitly:
-
-```bash
-node server.js --vault "/path/to/your/vault" --host 127.0.0.1 --port 5173
-```
-
-### Option B — Browser mode (no server vault)
+### Browser mode (no server vault)
 
 Start the server without `OBSIDIAN_VAULT`/`--vault`:
 
@@ -90,18 +73,6 @@ Notes:
 - In **Server mode**, file operations are restricted to the configured vault root (prevents `..` path traversal).
 - In both modes, some directories are hidden from the tree: `.obsidian`, `.git`, `node_modules`, `.trash`, `.DS_Store`.
 - This app is meant to run locally on your laptop. Do not expose it publicly.
-
-## API (Server mode)
-
-All endpoints return JSON.
-
-- `GET /api/health` → `{ ok: true }`
-- `GET /api/config` → `{ vault: string|null, version: string }`
-- `GET /api/list?dir=<rel>` → list a directory
-- `GET /api/read?path=<rel>` → read a file (UTF-8)
-- `PUT /api/write` body `{ path, content }` → write a file (UTF-8)
-- `POST /api/mkdir` body `{ path }` → create a directory (recursive)
-- `POST /api/move` body `{ from, to }` → move/rename a file
 
 ## Troubleshooting
 
