@@ -358,6 +358,23 @@ body {
   border-bottom-color: rgba(180, 166, 255, 0.7);
 }
 
+.preview .tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(124, 92, 255, 0.16);
+  border: 1px solid rgba(124, 92, 255, 0.22);
+  color: var(--text);
+  cursor: default;
+}
+
+[data-theme="light"] .preview .tag {
+  background: rgba(90, 69, 255, 0.12);
+  border-color: rgba(90, 69, 255, 0.22);
+}
+
 .preview code {
   font-family: var(--mono);
   font-size: 12px;

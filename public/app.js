@@ -176,6 +176,9 @@ function renderMarkdownBasic(md) {
 
     let s = (text ?? "").toString();
 
+    // Inline code first to avoid parsing tags/links inside it.
+    s = s.replaceAll(/`([^`]+)`/g, (_m, code) => tokenFor(`<code>${escapeHtml(code)}</code>`));
+
     s = s.replaceAll(/\[\[([^\]]+)\]\]/g, (_m, inner) => {
       const [left, ...rest] = (inner || "").split("|");
       const targetRaw = (left || "").trim();
@@ -187,8 +190,15 @@ function renderMarkdownBasic(md) {
       return tokenFor(`<a href="#" data-wikilink="${escapeHtml(data)}">${labelHtml}</a>`);
     });
 
+    // Obsidian tags: #tag or #tag/sub-tag
+    s = s.replaceAll(/(^|[^A-Za-z0-9_\\/])#([A-Za-z0-9][A-Za-z0-9_\\/-]*)/g, (_m, prefix, tag) => {
+      const t = (tag || "").trim();
+      if (!t) return `${prefix}#`;
+      const tagEsc = escapeHtml(t);
+      return `${prefix}${tokenFor(`<span class="tag" data-tag="${tagEsc}">#${tagEsc}</span>`)}`;
+    });
+
     s = escapeHtml(s);
-    s = s.replaceAll(/`([^`]+)`/g, "<code>$1</code>");
     s = s.replaceAll(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
     s = s.replaceAll(/\*([^*]+)\*/g, "<em>$1</em>");
     s = s.replaceAll(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, label, href) => {
