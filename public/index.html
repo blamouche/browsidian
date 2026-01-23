@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Obsidian Web</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="sidebar-top">
+          <div class="brand">
+            <div class="brand-title">Obsidian Web</div>
+            <div class="brand-subtitle" id="vaultName"></div>
+          </div>
+          <div class="actions">
+            <button id="selectVaultBtn" class="btn btn-secondary">Choisir un vault local</button>
+            <button id="useServerBtn" class="btn btn-secondary" hidden>Déconnecter</button>
+          </div>
+          <input id="search" class="search" placeholder="Rechercher un fichier…" autocomplete="off" hidden />
+          <div id="createActions" class="actions" hidden>
+            <button id="newFileBtn" class="btn">Nouveau fichier</button>
+            <button id="newFolderBtn" class="btn btn-secondary">Nouveau dossier</button>
+          </div>
+        </div>
+        <div id="tree" class="tree" role="tree" aria-label="Fichiers"></div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="path">
+            <span class="path-label">Fichier:</span>
+            <span id="currentPath" class="path-value">—</span>
+            <span id="dirty" class="dirty" title="Modifications non sauvegardées" hidden>●</span>
+          </div>
+          <div class="topbar-actions">
+            <button id="saveBtn" class="btn btn-primary" disabled>Sauvegarder (Ctrl+S)</button>
+          </div>
+        </header>
+
+        <section class="editor">
+          <div id="preview" class="preview" tabindex="0" role="button" aria-label="Aperçu (cliquer pour éditer)"></div>
+          <textarea
+            id="editor"
+            class="textarea"
+            spellcheck="false"
+            placeholder="Sélectionne un fichier à gauche…"
+            hidden
+          ></textarea>
+        </section>
+
+        <footer class="statusbar">
+          <div id="status" class="status">Prêt.</div>
+          <div class="status-right">
+            <div class="meta">
+              <span id="appVersion" class="meta-item" title="Version">v—</span>
+              <span class="meta-sep">•</span>
+              <a class="meta-item" href="https://lamouche.fr" target="_blank" rel="noreferrer noopener">made by Benoit</a>
+            </div>
+            <label class="toggle" title="Mode clair">
+              <input id="themeToggle" type="checkbox" />
+              <span class="toggle-track" aria-hidden="true"></span>
+              <span class="toggle-label">Clair</span>
+            </label>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <dialog id="promptDialog" class="dialog">
+      <form method="dialog" class="dialog-form">
+        <div class="dialog-title" id="promptTitle">Titre</div>
+        <div class="dialog-body">
+          <label class="dialog-label" for="promptInput" id="promptLabel">Label</label>
+          <input id="promptInput" class="dialog-input" />
+          <div class="dialog-help" id="promptHelp"></div>
+        </div>
+        <div class="dialog-actions">
+          <button value="cancel" class="btn btn-secondary">Annuler</button>
+          <button value="ok" class="btn btn-primary">OK</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="vaultDialog" class="dialog">
+      <form method="dialog" class="dialog-form">
+        <div class="dialog-title">Ouvrir un vault</div>
+        <div class="dialog-body">
+          <div class="dialog-help">
+            Aucun vault n’est ouvert. Tu peux choisir un dossier local (recommandé) ou lancer le serveur avec
+            <code>OBSIDIAN_VAULT</code>/<code>--vault</code>.
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button id="vaultChooseBtn" type="button" class="btn btn-primary">Choisir un vault local</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
