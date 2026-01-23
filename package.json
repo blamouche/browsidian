@@ -1,7 +1,7 @@
 {
   "name": "obsidian-web",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local web app to browse and edit an Obsidian vault in the browser.",
   "main": "server.js",
   "type": "commonjs",
@@ -9,4 +9,3 @@
     "start": "node server.js"
   }
 }
-
