@@ -7,15 +7,15 @@ const { URL } = require("url");
 const DEFAULT_PORT = 5173;
 const STATIC_DIR = path.join(__dirname, "public");
 const IGNORED_DIRS = new Set([".obsidian", ".git", "node_modules", ".trash", ".DS_Store"]);
-const APP_VERSION = (() => {
+
+async function getAppVersion() {
   try {
-    // eslint-disable-next-line no-sync
-    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"));
+    const pkg = JSON.parse(await fsp.readFile(path.join(__dirname, "package.json"), "utf8"));
     return pkg && typeof pkg.version === "string" ? pkg.version : "0.0.0";
   } catch {
     return "0.0.0";
   }
-})();
+}
 
 function parseArgs(argv) {
   const args = {};
@@ -167,15 +167,16 @@ async function serveStatic(reqUrl, res) {
     const st = await fsp.stat(abs);
     if (!st.isFile()) return false;
     if (pathname === "/index.html") {
+      const version = await getAppVersion();
       const raw = await fsp.readFile(abs, "utf8");
-      let body = raw.replaceAll("__APP_VERSION__", APP_VERSION);
+      let body = raw.replaceAll("__APP_VERSION__", version);
       body = body.replace(
         /<meta\s+name="app-version"\s+content="[^"]*"\s*\/?>/i,
-        `<meta name="app-version" content="${APP_VERSION}" />`
+        `<meta name="app-version" content="${version}" />`
       );
       body = body.replace(
         /<span\s+id="appVersion"([^>]*)>[^<]*<\/span>/i,
-        `<span id="appVersion"$1>v${APP_VERSION}</span>`
+        `<span id="appVersion"$1>v${version}</span>`
       );
       res.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
@@ -216,7 +217,8 @@ async function main() {
         }
 
         if (req.method === "GET" && reqUrl.pathname === "/api/config") {
-          return json(res, 200, { vault: vaultReal ? path.basename(vaultReal) : null, version: APP_VERSION });
+          const version = await getAppVersion();
+          return json(res, 200, { vault: vaultReal ? path.basename(vaultReal) : null, version });
         }
 
         if (!vaultReal) {

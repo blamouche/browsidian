@@ -61,7 +61,10 @@ function getEmbeddedAppVersion() {
 function setAppVersion(version) {
   if (!appVersionEl) return;
   const v = (version || "").toString().trim();
-  if (!v) return;
+  if (!v) {
+    appVersionEl.textContent = "v—";
+    return;
+  }
   appVersionEl.textContent = v.startsWith("v") ? v : `v${v}`;
 }
 
