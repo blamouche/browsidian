@@ -51,6 +51,19 @@ function setStatus(msg) {
   statusEl.textContent = msg;
 }
 
+function getEmbeddedAppVersion() {
+  const meta = document.querySelector('meta[name="app-version"]');
+  const v = (meta?.getAttribute("content") || "").trim();
+  if (!v || v === "__APP_VERSION__") return null;
+  return v;
+}
+
+function setAppVersion(version) {
+  if (!appVersionEl) return;
+  const v = (version || "").toString().trim();
+  appVersionEl.textContent = v ? `v${v}` : "v—";
+}
+
 const vaultHandleStore = (() => {
   const DB_NAME = "obsidian-web";
   const STORE = "vault";
@@ -1131,6 +1144,7 @@ async function selectLocalVault() {
   await vaultHandleStore.set(handle).catch(() => {});
   state.rootHandle = handle;
   state.vaultLabel = handle?.name ? `${handle.name} (local)` : "Local";
+  setAppVersion(getEmbeddedAppVersion());
   setMode("browser");
   vaultNameEl.textContent = state.vaultLabel ? `Vault: ${state.vaultLabel}` : "Vault: (local)";
   setVaultUiEnabled(true);
@@ -1151,6 +1165,7 @@ async function switchToServerMode() {
   setMode("server");
   resetUiState();
   const cfg = await apiGet("/api/config").catch(() => null);
+  setAppVersion(cfg?.version || getEmbeddedAppVersion());
   vaultNameEl.textContent = cfg?.vault ? `Vault: ${cfg.vault}` : "";
   if (!cfg?.vault) {
     setVaultUiEnabled(false);
@@ -1178,6 +1193,7 @@ async function restoreLocalVaultFromStorage() {
 
   state.rootHandle = handle;
   state.vaultLabel = handle?.name ? `${handle.name} (local)` : "Local";
+  setAppVersion(getEmbeddedAppVersion());
   setMode("browser");
   vaultNameEl.textContent = state.vaultLabel ? `Vault: ${state.vaultLabel}` : "Vault: (local)";
   setVaultUiEnabled(true);
@@ -1210,7 +1226,7 @@ async function bootstrap() {
   const cfg = await apiGet("/api/config").catch(() => null);
   state.vaultLabel = cfg?.vault ? cfg.vault : "";
   vaultNameEl.textContent = state.vaultLabel ? `Vault: ${state.vaultLabel}` : "";
-  if (appVersionEl) appVersionEl.textContent = cfg?.version ? `v${cfg.version}` : "v—";
+  setAppVersion(cfg?.version || getEmbeddedAppVersion());
   setMode("server");
 
   const restored = await restoreLocalVaultFromStorage().catch(() => false);

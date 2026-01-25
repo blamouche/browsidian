@@ -166,6 +166,18 @@ async function serveStatic(reqUrl, res) {
   try {
     const st = await fsp.stat(abs);
     if (!st.isFile()) return false;
+    if (pathname === "/index.html") {
+      const raw = await fsp.readFile(abs, "utf8");
+      const body = raw.replaceAll("__APP_VERSION__", APP_VERSION);
+      res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Length": Buffer.byteLength(body),
+        "Cache-Control": "no-store"
+      });
+      res.end(body);
+      return true;
+    }
+
     res.writeHead(200, {
       "Content-Type": guessContentType(abs),
       "Content-Length": st.size,
