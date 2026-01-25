@@ -51,6 +51,18 @@ function setStatus(msg) {
   statusEl.textContent = msg;
 }
 
+async function tryGetPackageJsonVersion() {
+  try {
+    const res = await fetch("/package.json", { headers: { "Accept": "application/json" }, cache: "no-store" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return null;
+    const v = (data?.version || "").toString().trim();
+    return v || null;
+  } catch {
+    return null;
+  }
+}
+
 function getEmbeddedAppVersion() {
   const meta = document.querySelector('meta[name="app-version"]');
   const v = (meta?.getAttribute("content") || "").trim();
@@ -61,7 +73,10 @@ function getEmbeddedAppVersion() {
 function setAppVersion(version) {
   if (!appVersionEl) return;
   const v = (version || "").toString().trim();
-  if (!v) return;
+  if (!v) {
+    appVersionEl.textContent = "v—";
+    return;
+  }
   appVersionEl.textContent = v.startsWith("v") ? v : `v${v}`;
 }
 
@@ -1166,7 +1181,7 @@ async function switchToServerMode() {
   setMode("server");
   resetUiState();
   const cfg = await apiGet("/api/config").catch(() => null);
-  setAppVersion(cfg?.version || getEmbeddedAppVersion());
+  setAppVersion(cfg?.version || getEmbeddedAppVersion() || (await tryGetPackageJsonVersion()));
   vaultNameEl.textContent = cfg?.vault ? `Vault: ${cfg.vault}` : "";
   if (!cfg?.vault) {
     setVaultUiEnabled(false);
@@ -1227,7 +1242,7 @@ async function bootstrap() {
   const cfg = await apiGet("/api/config").catch(() => null);
   state.vaultLabel = cfg?.vault ? cfg.vault : "";
   vaultNameEl.textContent = state.vaultLabel ? `Vault: ${state.vaultLabel}` : "";
-  setAppVersion(cfg?.version || getEmbeddedAppVersion());
+  setAppVersion(cfg?.version || getEmbeddedAppVersion() || (await tryGetPackageJsonVersion()));
   setMode("server");
 
   const restored = await restoreLocalVaultFromStorage().catch(() => false);
