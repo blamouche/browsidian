@@ -1174,6 +1174,7 @@ async function createFile() {
 
   if (!lower.endsWith(".md")) {
     if (baseName.includes(".")) {
+      alert("Only .md files are allowed.");
       setStatus("Error: only .md files are allowed.");
       return;
     }
