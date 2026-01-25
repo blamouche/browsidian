@@ -302,6 +302,11 @@ async function main() {
         return json(res, 404, { error: "Not found" });
       }
 
+      if (req.method === "GET" && reqUrl.pathname === "/package.json") {
+        const version = await getAppVersion();
+        return json(res, 200, { version });
+      }
+
       const served = await serveStatic(reqUrl, res);
       if (!served) text(res, 404, "Not Found");
     } catch (err) {
