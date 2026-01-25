@@ -1114,9 +1114,18 @@ function showPrompt({ title, label, help, placeholder, value }) {
   promptInput.focus();
   promptInput.select();
   return new Promise((resolve) => {
+    const onKeyDown = (e) => {
+      if (e.isComposing) return;
+      if (e.key !== "Enter") return;
+      if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+      e.preventDefault();
+      promptDialog.close("ok");
+    };
+    promptInput.addEventListener("keydown", onKeyDown);
     promptDialog.addEventListener(
       "close",
       () => {
+        promptInput.removeEventListener("keydown", onKeyDown);
         const ok = promptDialog.returnValue === "ok";
         resolve(ok ? promptInput.value : null);
       },
