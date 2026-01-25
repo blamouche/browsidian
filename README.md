@@ -23,6 +23,7 @@ It supports three working modes:
 - Drag & drop a file onto a folder to move it
 - Click a folder to select it (used as default destination for new files/folders)
 - Dark / Light mode toggle (persisted in `localStorage`)
+- Material Design UI (light and dark themes)
 - Footer shows app version (from `/api/config` when available)
 
 ## Requirements
