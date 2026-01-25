@@ -1145,6 +1145,26 @@ function setSelectedDir(dirRel) {
   renderTree();
 }
 
+function clearActiveFile() {
+  clearAutosaveTimer();
+  state.activeFile = null;
+  state.activeFileContent = "";
+  editorEl.value = "";
+  setActivePath("");
+  setDirty(false);
+  showPreview();
+}
+
+async function selectFolder(dirRel) {
+  if (state.dirty) {
+    const ok = confirm("You have unsaved changes. Continue without saving?");
+    if (!ok) return;
+  }
+  if (state.activeFile) clearActiveFile();
+  setSelectedDir(dirRel);
+  setStatus("Ready.");
+}
+
 async function createFolder() {
   const base = normalizeDir((state.selectedDir ?? (state.activeFile ? parentDirOf(state.activeFile) : "")) || "");
   const rel = await showPrompt({
@@ -1211,7 +1231,7 @@ treeEl.addEventListener("click", async (e) => {
   try {
     if (type === "dir") {
       if (clickedIcon) await toggleDir(p);
-      else setSelectedDir(p);
+      else await selectFolder(p);
       return;
     }
     await openFile(p);

@@ -122,6 +122,7 @@ git rebase origin/main
   - When the editor loses focus, it switches back to preview.
 - **Folder selection**
   - Click a folder row (name) to select it.
+  - Selecting a folder clears the currently selected file.
   - Creating a new file/folder pre-fills its path using the selected folder.
   - Click the folder icon to expand/collapse.
 - **Saving**
