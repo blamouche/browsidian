@@ -1167,20 +1167,29 @@ async function createFile() {
     value: base ? `${base}/` : ""
   });
   if (!rel) return;
-  if (!rel.toLowerCase().endsWith(".md")) {
-    const ok = confirm("The file does not end with .md. Continue?");
-    if (!ok) return;
+  const trimmed = rel.trim();
+  const baseName = basenameOf(trimmed);
+  const lower = trimmed.toLowerCase();
+  let finalPath = trimmed;
+
+  if (!lower.endsWith(".md")) {
+    if (baseName.includes(".")) {
+      setStatus("Error: only .md files are allowed.");
+      return;
+    }
+    finalPath = `${trimmed}.md`;
   }
+
   setStatus("Creating file…");
-  await writeFile(rel, "");
+  await writeFile(finalPath, "");
   invalidateFileIndex();
-  const parent = parentDirOf(rel);
+  const parent = parentDirOf(finalPath);
   state.childrenByDir.delete(parent);
   await ensureDirLoaded(parent);
   state.expandedDirs.add(parent);
   setStatus("File created.");
   renderTree();
-  await openFile(rel);
+  await openFile(finalPath);
 }
 
 treeEl.addEventListener("click", async (e) => {

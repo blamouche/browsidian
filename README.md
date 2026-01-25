@@ -13,6 +13,7 @@ It supports three working modes:
 - Browse vault folders and files (tree view)
 - Search files by path/name (client-side filter)
 - Create folders and files
+- New files must be Markdown (`.md`)
 - Edit Markdown with **auto-save** (~1s inactivity) and **Ctrl+S**
 - **Preview mode** (basic Markdown → HTML) when not focused; click to edit Markdown
 - Obsidian **wikilinks** in preview: `[[Note]]`, `[[Note|Alias]]` (click to navigate)
