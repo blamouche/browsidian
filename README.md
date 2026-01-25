@@ -25,6 +25,12 @@ It supports two working modes:
 - Node.js 18+ (recommended)
 - For **Browser mode**: Chrome / Edge / Brave (File System Access API)
 
+## Production
+
+Use the hosted app (Browser mode only):
+
+- https://obsidian-web.app.lamouche.fr/
+
 ## Getting started
 
 ### Browser mode (no server vault)
