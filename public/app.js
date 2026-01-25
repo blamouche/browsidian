@@ -1112,11 +1112,25 @@ function showPrompt({ title, label, help, placeholder, value }) {
   promptInput.placeholder = placeholder || "";
   promptDialog.showModal();
   promptInput.focus();
-  promptInput.select();
+  const len = promptInput.value.length;
+  if (promptInput.value.endsWith("/")) {
+    promptInput.setSelectionRange(len, len);
+  } else {
+    promptInput.select();
+  }
   return new Promise((resolve) => {
+    const onKeyDown = (e) => {
+      if (e.isComposing) return;
+      if (e.key !== "Enter") return;
+      if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+      e.preventDefault();
+      promptDialog.close("ok");
+    };
+    promptInput.addEventListener("keydown", onKeyDown);
     promptDialog.addEventListener(
       "close",
       () => {
+        promptInput.removeEventListener("keydown", onKeyDown);
         const ok = promptDialog.returnValue === "ok";
         resolve(ok ? promptInput.value : null);
       },
@@ -1134,6 +1148,26 @@ function parentDirOf(pathStr) {
 function setSelectedDir(dirRel) {
   state.selectedDir = normalizeDir(dirRel);
   renderTree();
+}
+
+function clearActiveFile() {
+  clearAutosaveTimer();
+  state.activeFile = null;
+  state.activeFileContent = "";
+  editorEl.value = "";
+  setActivePath("");
+  setDirty(false);
+  showPreview();
+}
+
+async function selectFolder(dirRel) {
+  if (state.dirty) {
+    const ok = confirm("You have unsaved changes. Continue without saving?");
+    if (!ok) return;
+  }
+  if (state.activeFile) clearActiveFile();
+  setSelectedDir(dirRel);
+  setStatus("Ready.");
 }
 
 async function createFolder() {
@@ -1202,7 +1236,7 @@ treeEl.addEventListener("click", async (e) => {
   try {
     if (type === "dir") {
       if (clickedIcon) await toggleDir(p);
-      else setSelectedDir(p);
+      else await selectFolder(p);
       return;
     }
     await openFile(p);

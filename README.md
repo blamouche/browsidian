@@ -13,6 +13,7 @@ It supports three working modes:
 - Browse vault folders and files (tree view)
 - Search files by path/name (client-side filter)
 - Create folders and files
+- In creation dialogs, press Enter to confirm
 - New files must be Markdown (`.md`)
 - Edit Markdown with **auto-save** (~1s inactivity) and **Ctrl+S**
 - **Preview mode** (basic Markdown → HTML) when not focused; click to edit Markdown
@@ -121,8 +122,10 @@ git rebase origin/main
   - When the editor loses focus, it switches back to preview.
 - **Folder selection**
   - Click a folder row (name) to select it.
+  - Selecting a folder clears the currently selected file.
   - Creating a new file/folder pre-fills its path using the selected folder.
   - Click the folder icon to expand/collapse.
+  - When a folder path is pre-filled (ending with `/`), the cursor is placed at the end (no auto-selection).
 - **Saving**
   - Auto-save runs after ~1.2s without typing (when a file is dirty).
   - You can always press **Ctrl+S** (or click **Save**) to save immediately.
