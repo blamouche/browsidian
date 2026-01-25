@@ -31,6 +31,7 @@ const state = {
   mode: "server", // "server" | "browser" | "demo"
   vaultLabel: "",
   appVersion: null,
+  selectedDir: null,
   rootHandle: null,
   expandedDirs: new Set([""]),
   childrenByDir: new Map(), // dir -> entries[]
@@ -954,6 +955,8 @@ function renderTree() {
   const rootChildren = state.childrenByDir.get("") || [];
   const frag = document.createDocumentFragment();
 
+  const selectedDir = normalizeDir(state.selectedDir || "");
+
   const renderDirChildren = (dir, container) => {
     const entries = state.childrenByDir.get(dir) || [];
     for (const entry of entries) {
@@ -976,6 +979,7 @@ function renderTree() {
       }
 
       if (entry.type === "file" && entry.path === state.activeFile) row.classList.add("active");
+      if (entry.type === "dir" && entry.path === selectedDir) row.classList.add("selected");
 
       const icon = document.createElement("div");
       icon.className = "icon";
@@ -1039,6 +1043,7 @@ async function openFile(filePath) {
   setStatus(`Opening: ${filePath}`);
   const content = await readFile(filePath);
   state.activeFile = filePath;
+  state.selectedDir = parentDirOf(filePath);
   state.activeFileContent = content;
   editorEl.value = content;
   setActivePath(filePath);
@@ -1126,8 +1131,13 @@ function parentDirOf(pathStr) {
   return idx === -1 ? "" : s.slice(0, idx);
 }
 
+function setSelectedDir(dirRel) {
+  state.selectedDir = normalizeDir(dirRel);
+  renderTree();
+}
+
 async function createFolder() {
-  const base = state.activeFile ? parentDirOf(state.activeFile) : "";
+  const base = normalizeDir((state.selectedDir ?? (state.activeFile ? parentDirOf(state.activeFile) : "")) || "");
   const rel = await showPrompt({
     title: "New folder",
     label: "Path (relative to the vault)",
@@ -1148,7 +1158,7 @@ async function createFolder() {
 }
 
 async function createFile() {
-  const base = state.activeFile ? parentDirOf(state.activeFile) : "";
+  const base = normalizeDir((state.selectedDir ?? (state.activeFile ? parentDirOf(state.activeFile) : "")) || "");
   const rel = await showPrompt({
     title: "New file",
     label: "Path (relative to the vault)",
@@ -1178,9 +1188,14 @@ treeEl.addEventListener("click", async (e) => {
   if (!row) return;
   const type = row.dataset.type;
   const p = row.dataset.path;
+  const clickedIcon = Boolean(e.target.closest(".icon"));
   try {
-    if (type === "dir") await toggleDir(p);
-    else await openFile(p);
+    if (type === "dir") {
+      if (clickedIcon) await toggleDir(p);
+      else setSelectedDir(p);
+      return;
+    }
+    await openFile(p);
   } catch (err) {
     setStatus(`Error: ${err.message}`);
   }
@@ -1195,9 +1210,18 @@ treeEl.addEventListener("dragstart", (e) => {
   if (!row) return;
   if (row.dataset.type !== "file") return;
   state.draggingPath = row.dataset.path;
-  e.dataTransfer.effectAllowed = "move";
-  e.dataTransfer.setData("text/plain", row.dataset.path);
-  e.dataTransfer.setData("application/x-obsidian-web-path", row.dataset.path);
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  dt.effectAllowed = "move";
+  try {
+    dt.setData("text/plain", row.dataset.path);
+  } catch {}
+  try {
+    dt.setData("text", row.dataset.path);
+  } catch {}
+  try {
+    dt.setData("application/x-obsidian-web-path", row.dataset.path);
+  } catch {}
 });
 
 treeEl.addEventListener("dragend", () => {
@@ -1205,17 +1229,23 @@ treeEl.addEventListener("dragend", () => {
   clearDropTargets();
 });
 
+treeEl.addEventListener("dragenter", (e) => {
+  if (!state.draggingPath) return;
+  e.preventDefault();
+});
+
 treeEl.addEventListener("dragover", (e) => {
-  const row = e.target.closest(".tree-item");
-  if (!row) return;
   const draggingPath = state.draggingPath;
   if (!draggingPath) return;
-  const targetType = row.dataset.type;
-  if (targetType !== "dir" && targetType !== "file") return;
+  const row = e.target.closest(".tree-item");
+  if (row) {
+    const targetType = row.dataset.type;
+    if (targetType !== "dir" && targetType !== "file") return;
+    clearDropTargets();
+    row.classList.add("drop-target");
+  }
   e.preventDefault();
-  e.dataTransfer.dropEffect = "move";
-  clearDropTargets();
-  row.classList.add("drop-target");
+  if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
 });
 
 treeEl.addEventListener("dragleave", (e) => {
@@ -1226,16 +1256,24 @@ treeEl.addEventListener("dragleave", (e) => {
 
 treeEl.addEventListener("drop", async (e) => {
   const row = e.target.closest(".tree-item");
-  if (!row) return;
   e.preventDefault();
   clearDropTargets();
   const from = state.draggingPath;
   if (!from) return;
-  if (row.dataset.type !== "dir" && row.dataset.type !== "file") return;
 
-  const targetDir = row.dataset.type === "dir" ? row.dataset.path : parentDirOf(row.dataset.path);
+  let targetDir = "";
+  if (row) {
+    if (row.dataset.type !== "dir" && row.dataset.type !== "file") return;
+    targetDir = row.dataset.type === "dir" ? row.dataset.path : parentDirOf(row.dataset.path);
+  } else {
+    targetDir = state.selectedDir || "";
+  }
+
   const to = joinPath(normalizeDir(targetDir), basenameOf(from));
-  if (to === from) return;
+  if (to === from) {
+    setStatus("No move.");
+    return;
+  }
 
   try {
     const ok = confirm(`Move\n\n${from}\n\n→ ${to}\n\nConfirm?`);
@@ -1349,6 +1387,7 @@ function resetUiState() {
   state.activeFile = null;
   state.activeFileContent = "";
   state.dirty = false;
+  state.selectedDir = null;
   state.filter = searchEl.value || "";
   editorEl.value = "";
   previewEl.innerHTML = `<div class="muted">Select a file on the left…</div>`;

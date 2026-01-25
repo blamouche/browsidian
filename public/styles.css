@@ -226,6 +226,11 @@ body {
   border: 1px solid rgba(124, 92, 255, 0.25);
 }
 
+.tree-item.selected {
+  background: rgba(124, 92, 255, 0.1);
+  border: 1px solid rgba(124, 92, 255, 0.18);
+}
+
 .tree-item.drop-target {
   background: rgba(54, 211, 153, 0.14);
   border: 1px solid rgba(54, 211, 153, 0.35);
