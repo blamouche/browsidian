@@ -17,6 +17,7 @@ It supports three working modes:
 - New files must be Markdown (`.md`)
 - Edit Markdown with **auto-save** (~1s inactivity) and **Ctrl+S**
 - **Preview mode** (basic Markdown → HTML) when not focused; click to edit Markdown
+- Non-`.md` files show "File not supported" in preview
 - Obsidian **wikilinks** in preview: `[[Note]]`, `[[Note|Alias]]` (click to navigate)
 - Basic Markdown tables in preview
 - Drag & drop a file onto a folder to move it
