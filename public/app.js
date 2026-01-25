@@ -1112,7 +1112,12 @@ function showPrompt({ title, label, help, placeholder, value }) {
   promptInput.placeholder = placeholder || "";
   promptDialog.showModal();
   promptInput.focus();
-  promptInput.select();
+  const len = promptInput.value.length;
+  if (promptInput.value.endsWith("/")) {
+    promptInput.setSelectionRange(len, len);
+  } else {
+    promptInput.select();
+  }
   return new Promise((resolve) => {
     const onKeyDown = (e) => {
       if (e.isComposing) return;

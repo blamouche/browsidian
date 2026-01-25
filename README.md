@@ -125,6 +125,7 @@ git rebase origin/main
   - Selecting a folder clears the currently selected file.
   - Creating a new file/folder pre-fills its path using the selected folder.
   - Click the folder icon to expand/collapse.
+  - When a folder path is pre-filled (ending with `/`), the cursor is placed at the end (no auto-selection).
 - **Saving**
   - Auto-save runs after ~1.2s without typing (when a file is dirty).
   - You can always press **Ctrl+S** (or click **Save**) to save immediately.
