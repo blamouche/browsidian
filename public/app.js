@@ -61,7 +61,8 @@ function getEmbeddedAppVersion() {
 function setAppVersion(version) {
   if (!appVersionEl) return;
   const v = (version || "").toString().trim();
-  appVersionEl.textContent = v ? `v${v}` : "v—";
+  if (!v) return;
+  appVersionEl.textContent = v.startsWith("v") ? v : `v${v}`;
 }
 
 const vaultHandleStore = (() => {
