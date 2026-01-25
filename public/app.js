@@ -506,7 +506,7 @@ function renderMarkdownBasic(md) {
 
   const flushParagraph = (buf) => {
     if (!buf.length) return;
-    html += `<p>${inline(buf.join(" "))}</p>`;
+    html += `<p>${buf.map((l) => inline(l)).join("<br />")}</p>`;
     buf.length = 0;
   };
 
