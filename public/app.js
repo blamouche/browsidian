@@ -644,13 +644,17 @@ function showPreview() {
   editorEl.hidden = true;
   previewEl.hidden = false;
   const content = state.activeFile ? editorEl.value : "";
+  const isMd = state.activeFile ? state.activeFile.toLowerCase().endsWith(".md") : false;
   previewEl.innerHTML = state.activeFile
-    ? renderMarkdownBasic(content)
+    ? isMd
+      ? renderMarkdownBasic(content)
+      : `<div class="muted">File not supported</div>`
     : `<div class="muted">Select a file on the left…</div>`;
 }
 
 function showEditor({ focus } = { focus: true }) {
   if (!state.activeFile) return;
+  if (!state.activeFile.toLowerCase().endsWith(".md")) return;
   previewEl.hidden = true;
   editorEl.hidden = false;
   if (focus) editorEl.focus();
