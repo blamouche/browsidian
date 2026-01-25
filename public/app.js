@@ -31,6 +31,7 @@ const state = {
   mode: "server", // "server" | "browser" | "demo"
   vaultLabel: "",
   appVersion: null,
+  selectedDir: null,
   rootHandle: null,
   expandedDirs: new Set([""]),
   childrenByDir: new Map(), // dir -> entries[]
@@ -954,6 +955,8 @@ function renderTree() {
   const rootChildren = state.childrenByDir.get("") || [];
   const frag = document.createDocumentFragment();
 
+  const selectedDir = normalizeDir(state.selectedDir || "");
+
   const renderDirChildren = (dir, container) => {
     const entries = state.childrenByDir.get(dir) || [];
     for (const entry of entries) {
@@ -976,6 +979,7 @@ function renderTree() {
       }
 
       if (entry.type === "file" && entry.path === state.activeFile) row.classList.add("active");
+      if (entry.type === "dir" && entry.path === selectedDir) row.classList.add("selected");
 
       const icon = document.createElement("div");
       icon.className = "icon";
@@ -1039,6 +1043,7 @@ async function openFile(filePath) {
   setStatus(`Opening: ${filePath}`);
   const content = await readFile(filePath);
   state.activeFile = filePath;
+  state.selectedDir = parentDirOf(filePath);
   state.activeFileContent = content;
   editorEl.value = content;
   setActivePath(filePath);
@@ -1126,8 +1131,13 @@ function parentDirOf(pathStr) {
   return idx === -1 ? "" : s.slice(0, idx);
 }
 
+function setSelectedDir(dirRel) {
+  state.selectedDir = normalizeDir(dirRel);
+  renderTree();
+}
+
 async function createFolder() {
-  const base = state.activeFile ? parentDirOf(state.activeFile) : "";
+  const base = normalizeDir((state.selectedDir ?? (state.activeFile ? parentDirOf(state.activeFile) : "")) || "");
   const rel = await showPrompt({
     title: "New folder",
     label: "Path (relative to the vault)",
@@ -1148,7 +1158,7 @@ async function createFolder() {
 }
 
 async function createFile() {
-  const base = state.activeFile ? parentDirOf(state.activeFile) : "";
+  const base = normalizeDir((state.selectedDir ?? (state.activeFile ? parentDirOf(state.activeFile) : "")) || "");
   const rel = await showPrompt({
     title: "New file",
     label: "Path (relative to the vault)",
@@ -1178,9 +1188,14 @@ treeEl.addEventListener("click", async (e) => {
   if (!row) return;
   const type = row.dataset.type;
   const p = row.dataset.path;
+  const clickedIcon = Boolean(e.target.closest(".icon"));
   try {
-    if (type === "dir") await toggleDir(p);
-    else await openFile(p);
+    if (type === "dir") {
+      if (clickedIcon) await toggleDir(p);
+      else setSelectedDir(p);
+      return;
+    }
+    await openFile(p);
   } catch (err) {
     setStatus(`Error: ${err.message}`);
   }
@@ -1349,6 +1364,7 @@ function resetUiState() {
   state.activeFile = null;
   state.activeFileContent = "";
   state.dirty = false;
+  state.selectedDir = null;
   state.filter = searchEl.value || "";
   editorEl.value = "";
   previewEl.innerHTML = `<div class="muted">Select a file on the left…</div>`;
