@@ -37,6 +37,48 @@ npm start
 
 Open the app, then click **Choose local vault** and select your vault folder.
 
+## Contributing (GitHub workflow)
+
+This project uses a simple GitHub collaboration flow: work on a dedicated branch, then open a Pull Request (PR) to merge into `main`.
+
+### 1) Create a working branch
+
+Always branch from `main` and use the `features/my-feature` naming convention:
+
+```bash
+git checkout main
+git pull --ff-only
+git checkout -b features/my-feature
+```
+
+### 2) Develop and commit
+
+- Keep changes focused (small PRs are easier to review).
+- Use clear commit messages (what/why). If you rewrite history on your branch, use `git push --force-with-lease` (never on `main`).
+- Update documentation (`README.md`) when behavior/usage changes.
+- Avoid committing personal vault content or secrets (this app is meant to run locally).
+
+### 3) Push and open a Pull Request
+
+```bash
+git push -u origin features/my-feature
+```
+
+Then on GitHub:
+
+- Open a **Pull Request** from `features/my-feature` → `main`.
+- Describe the change, add screenshots if UI changes, and list any manual checks you ran (e.g. `npm start`).
+- Request a review and address feedback with follow-up commits.
+
+### 4) Keep your branch up to date (optional)
+
+If `main` moved while you were working:
+
+```bash
+git fetch origin
+git rebase origin/main
+```
+
 ## UI behavior
 
 - **Preview vs Edit**
