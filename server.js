@@ -168,7 +168,15 @@ async function serveStatic(reqUrl, res) {
     if (!st.isFile()) return false;
     if (pathname === "/index.html") {
       const raw = await fsp.readFile(abs, "utf8");
-      const body = raw.replaceAll("__APP_VERSION__", APP_VERSION);
+      let body = raw.replaceAll("__APP_VERSION__", APP_VERSION);
+      body = body.replace(
+        /<meta\s+name="app-version"\s+content="[^"]*"\s*\/?>/i,
+        `<meta name="app-version" content="${APP_VERSION}" />`
+      );
+      body = body.replace(
+        /<span\s+id="appVersion"([^>]*)>[^<]*<\/span>/i,
+        `<span id="appVersion"$1>v${APP_VERSION}</span>`
+      );
       res.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
         "Content-Length": Buffer.byteLength(body),
