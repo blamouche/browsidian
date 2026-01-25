@@ -14,6 +14,8 @@ const useServerBtn = document.getElementById("useServerBtn");
 const createActionsEl = document.getElementById("createActions");
 const appVersionEl = document.getElementById("appVersion");
 const themeToggleEl = document.getElementById("themeToggle");
+const contextMenuEl = document.getElementById("contextMenu");
+const contextDeleteFileEl = document.getElementById("contextDeleteFile");
 
 const promptDialog = document.getElementById("promptDialog");
 const promptTitle = document.getElementById("promptTitle");
@@ -48,6 +50,71 @@ const AUTOSAVE_DELAY_MS = 1200;
 function setStatus(msg) {
   statusEl.textContent = msg;
 }
+
+const vaultHandleStore = (() => {
+  const DB_NAME = "obsidian-web";
+  const STORE = "vault";
+  const KEY = "rootHandle";
+
+  function openDb() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function get() {
+    const db = await openDb();
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readonly");
+        const store = tx.objectStore(STORE);
+        const req = store.get(KEY);
+        req.onsuccess = () => resolve(req.result ?? null);
+        req.onerror = () => reject(req.error);
+      });
+    } finally {
+      db.close();
+    }
+  }
+
+  async function set(handle) {
+    const db = await openDb();
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const store = tx.objectStore(STORE);
+        const req = store.put(handle, KEY);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    } finally {
+      db.close();
+    }
+  }
+
+  async function clear() {
+    const db = await openDb();
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        const store = tx.objectStore(STORE);
+        const req = store.delete(KEY);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    } finally {
+      db.close();
+    }
+  }
+
+  return { get, set, clear };
+})();
 
 function escapeHtml(s) {
   return (s ?? "")
@@ -399,6 +466,31 @@ function setVaultUiEnabled(enabled) {
   if (createActionsEl) createActionsEl.hidden = !on;
 }
 
+function hideContextMenu() {
+  if (!contextMenuEl) return;
+  contextMenuEl.hidden = true;
+  contextMenuEl.style.left = "0px";
+  contextMenuEl.style.top = "0px";
+  contextMenuEl.dataset.path = "";
+}
+
+function showContextMenu({ x, y, path }) {
+  if (!contextMenuEl) return;
+  contextMenuEl.hidden = false;
+  contextMenuEl.dataset.path = path || "";
+
+  const padding = 8;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  contextMenuEl.style.left = "0px";
+  contextMenuEl.style.top = "0px";
+  const rect = contextMenuEl.getBoundingClientRect();
+  const left = Math.min(Math.max(padding, x), vw - rect.width - padding);
+  const top = Math.min(Math.max(padding, y), vh - rect.height - padding);
+  contextMenuEl.style.left = `${left}px`;
+  contextMenuEl.style.top = `${top}px`;
+}
+
 function applyTheme(theme) {
   const t = theme === "light" ? "light" : "dark";
   if (t === "light") document.documentElement.dataset.theme = "light";
@@ -566,10 +658,18 @@ async function pathExistsBrowser(relPath) {
 async function deleteFileBrowser(fileRel) {
   const parts = splitPath(fileRel);
   const name = parts.pop();
-  if (!name) throw new Error("Chemin de fichier invalide");
+  if (!name) throw new Error("Invalid file path");
   const parent = parts.length ? parts.join("/") : "";
   const dir = await getDirHandleByPath(parent, { create: false });
   await dir.removeEntry(name);
+}
+
+async function deleteFilePath(fileRel) {
+  if (state.mode === "browser") {
+    await deleteFileBrowser(fileRel);
+    return;
+  }
+  await apiSend("POST", "/api/delete", { path: fileRel });
 }
 
 async function moveFilePath(fromRel, toRel) {
@@ -1028,6 +1128,7 @@ async function selectLocalVault() {
   }
   setStatus("Selecting folder…");
   const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+  await vaultHandleStore.set(handle).catch(() => {});
   state.rootHandle = handle;
   state.vaultLabel = handle?.name ? `${handle.name} (local)` : "Local";
   setMode("browser");
@@ -1046,6 +1147,7 @@ async function switchToServerMode() {
   }
   setStatus("Disconnecting…");
   state.rootHandle = null;
+  await vaultHandleStore.clear().catch(() => {});
   setMode("server");
   resetUiState();
   const cfg = await apiGet("/api/config").catch(() => null);
@@ -1061,6 +1163,30 @@ async function switchToServerMode() {
   await ensureDirLoaded("");
   renderTree();
   setStatus("Ready.");
+}
+
+async function restoreLocalVaultFromStorage() {
+  if (!("showDirectoryPicker" in window)) return false;
+  const handle = await vaultHandleStore.get().catch(() => null);
+  if (!handle) return false;
+
+  const opts = { mode: "readwrite" };
+  let perm = "prompt";
+  if (typeof handle.queryPermission === "function") perm = await handle.queryPermission(opts);
+  if (perm !== "granted" && typeof handle.requestPermission === "function") perm = await handle.requestPermission(opts);
+  if (perm !== "granted") return false;
+
+  state.rootHandle = handle;
+  state.vaultLabel = handle?.name ? `${handle.name} (local)` : "Local";
+  setMode("browser");
+  vaultNameEl.textContent = state.vaultLabel ? `Vault: ${state.vaultLabel}` : "Vault: (local)";
+  setVaultUiEnabled(true);
+  resetUiState();
+  await ensureDirLoaded("");
+  renderTree();
+  setStatus("Ready.");
+  if (vaultDialog?.open) vaultDialog.close();
+  return true;
 }
 
 selectVaultBtn.addEventListener("click", async () => {
@@ -1086,6 +1212,10 @@ async function bootstrap() {
   vaultNameEl.textContent = state.vaultLabel ? `Vault: ${state.vaultLabel}` : "";
   if (appVersionEl) appVersionEl.textContent = cfg?.version ? `v${cfg.version}` : "v—";
   setMode("server");
+
+  const restored = await restoreLocalVaultFromStorage().catch(() => false);
+  if (restored) return;
+
   if (!cfg?.vault) {
     setVaultUiEnabled(false);
     treeEl.innerHTML = "";
@@ -1122,3 +1252,48 @@ if (vaultChooseBtn) {
 }
 
 bootstrap().catch((err) => setStatus(`Error: ${err.message}`));
+
+document.addEventListener("click", () => hideContextMenu());
+window.addEventListener("blur", () => hideContextMenu());
+window.addEventListener("scroll", () => hideContextMenu(), true);
+
+treeEl.addEventListener("contextmenu", (e) => {
+  const row = e.target.closest(".tree-item");
+  if (!row) return;
+  if (row.dataset.type !== "file") return;
+  e.preventDefault();
+  showContextMenu({ x: e.clientX, y: e.clientY, path: row.dataset.path });
+});
+
+if (contextDeleteFileEl) {
+  contextDeleteFileEl.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const p = contextMenuEl?.dataset?.path;
+    hideContextMenu();
+    if (!p) return;
+    const ok = confirm(`Delete\n\n${p}\n\nThis cannot be undone. Continue?`);
+    if (!ok) return;
+    try {
+      setStatus("Deleting…");
+      await deleteFilePath(p);
+      invalidateFileIndex();
+      const parent = parentDirOf(p);
+      state.childrenByDir.delete(parent);
+      await ensureDirLoaded(parent);
+
+      if (state.activeFile === p) {
+        state.activeFile = null;
+        state.activeFileContent = "";
+        editorEl.value = "";
+        showPreview();
+        setActivePath("");
+        setDirty(false);
+      }
+
+      renderTree();
+      setStatus("Deleted.");
+    } catch (err) {
+      setStatus(`Error: ${err.message}`);
+    }
+  });
+}

@@ -35,6 +35,45 @@
   display: none !important;
 }
 
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 180px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(15, 20, 32, 0.92);
+  box-shadow: 0 18px 60px var(--shadow);
+  padding: 6px;
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="light"] .context-menu {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.context-item {
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  padding: 9px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.context-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .context-item:hover {
+  background: rgba(2, 8, 23, 0.06);
+  border-color: rgba(2, 8, 23, 0.08);
+}
+
 html,
 body {
   height: 100%;

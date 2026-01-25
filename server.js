@@ -133,6 +133,13 @@ async function moveFile(vaultReal, fromRel, toRel) {
   await fsp.rename(fromAbs, toAbs);
 }
 
+async function deleteFile(vaultReal, fileRel) {
+  const abs = ensureInsideVault(vaultReal, fileRel);
+  const st = await fsp.stat(abs);
+  if (!st.isFile()) throw Object.assign(new Error("Not a file"), { statusCode: 400 });
+  await fsp.unlink(abs);
+}
+
 async function mkdirp(vaultReal, dirRel) {
   const abs = ensureInsideVault(vaultReal, dirRel);
   await fsp.mkdir(abs, { recursive: true });
@@ -239,6 +246,21 @@ async function main() {
             return json(res, 400, { error: "Expected { from, to }" });
           }
           await moveFile(vaultReal, payload.from, payload.to);
+          return json(res, 200, { ok: true });
+        }
+
+        if (req.method === "POST" && reqUrl.pathname === "/api/delete") {
+          const bodyBuf = await readBody(req, 1024 * 1024);
+          let payload;
+          try {
+            payload = JSON.parse(bodyBuf.toString("utf8") || "{}");
+          } catch {
+            return json(res, 400, { error: "Invalid JSON" });
+          }
+          if (!payload || typeof payload.path !== "string") {
+            return json(res, 400, { error: "Expected { path }" });
+          }
+          await deleteFile(vaultReal, payload.path);
           return json(res, 200, { ok: true });
         }
 
