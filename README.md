@@ -127,6 +127,7 @@ git rebase origin/main
   - You can always press **Ctrl+S** (or click **Save**) to save immediately.
 - **Moving files**
   - Drag a file from the tree and drop it on a folder to move it there (a confirmation dialog is shown).
+  - You can also drop on empty tree space to move into the selected folder (or the vault root if none is selected).
 
 ## Markdown preview support (basic)
 
