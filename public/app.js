@@ -25,9 +25,10 @@ const promptHelp = document.getElementById("promptHelp");
 
 const vaultDialog = document.getElementById("vaultDialog");
 const vaultChooseBtn = document.getElementById("vaultChooseBtn");
+const vaultDemoBtn = document.getElementById("vaultDemoBtn");
 
 const state = {
-  mode: "server", // "server" | "browser"
+  mode: "server", // "server" | "browser" | "demo"
   vaultLabel: "",
   appVersion: null,
   rootHandle: null,
@@ -51,6 +52,155 @@ const AUTOSAVE_DELAY_MS = 1200;
 function setStatus(msg) {
   statusEl.textContent = msg;
 }
+
+const demoVaultStore = (() => {
+  const KEY = "demoVaultV1";
+  const SEP = "/";
+
+  function normalize(rel) {
+    return (rel || "")
+      .toString()
+      .replaceAll("\\", "/")
+      .replaceAll(/^\/+/g, "")
+      .replaceAll(/\/+$/g, "");
+  }
+
+  function split(rel) {
+    const s = normalize(rel);
+    return s ? s.split(SEP).filter(Boolean) : [];
+  }
+
+  function parentDir(rel) {
+    const parts = split(rel);
+    parts.pop();
+    return parts.join(SEP);
+  }
+
+  function basename(rel) {
+    const parts = split(rel);
+    return parts.length ? parts[parts.length - 1] : "";
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return null;
+      if (!parsed.files || typeof parsed.files !== "object") return null;
+      if (!parsed.dirs || typeof parsed.dirs !== "object") return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function save(data) {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(data));
+    } catch {}
+  }
+
+  function ensureSeed() {
+    const existing = load();
+    if (existing) return existing;
+    const seeded = {
+      files: {
+        "Welcome.md": "# Welcome\n\nThis is a demo vault.\n\n- Create files/folders\n- Edit Markdown\n"
+      },
+      dirs: { "": true }
+    };
+    save(seeded);
+    return seeded;
+  }
+
+  function mkdir(dirRel) {
+    const data = ensureSeed();
+    const p = normalize(dirRel);
+    if (!p) return;
+    const parts = split(p);
+    let cur = "";
+    for (const part of parts) {
+      cur = cur ? `${cur}/${part}` : part;
+      data.dirs[cur] = true;
+    }
+    save(data);
+  }
+
+  function listDir(dirRel) {
+    const data = ensureSeed();
+    const d = normalize(dirRel);
+    const entries = [];
+
+    const dirs = Object.keys(data.dirs || {});
+    for (const p of dirs) {
+      if (!p) continue;
+      if (parentDir(p) !== d) continue;
+      const name = basename(p);
+      if (shouldIgnoreName(name)) continue;
+      entries.push({ name, path: p, type: "dir" });
+    }
+
+    const files = Object.keys(data.files || {});
+    for (const p of files) {
+      if (parentDir(p) !== d) continue;
+      const name = basename(p);
+      if (shouldIgnoreName(name)) continue;
+      entries.push({ name, path: p, type: "file" });
+    }
+
+    entries.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "dir" ? -1 : 1));
+    return entries;
+  }
+
+  function readFile(fileRel) {
+    const data = ensureSeed();
+    const p = normalize(fileRel);
+    if (!p) throw new Error("Invalid file path");
+    const content = data.files[p];
+    if (typeof content !== "string") throw new Error("File not found");
+    return content;
+  }
+
+  function writeFile(fileRel, content) {
+    const data = ensureSeed();
+    const p = normalize(fileRel);
+    if (!p) throw new Error("Invalid file path");
+    mkdir(parentDir(p));
+    data.files[p] = (content ?? "").toString();
+    save(data);
+  }
+
+  function deleteFile(fileRel) {
+    const data = ensureSeed();
+    const p = normalize(fileRel);
+    if (!p) throw new Error("Invalid file path");
+    if (!(p in data.files)) throw new Error("File not found");
+    delete data.files[p];
+    save(data);
+  }
+
+  function moveFile(fromRel, toRel) {
+    const data = ensureSeed();
+    const from = normalize(fromRel);
+    const to = normalize(toRel);
+    if (!from || !to) throw new Error("Invalid path");
+    if (!(from in data.files)) throw new Error("File not found");
+    if (to in data.files) throw new Error("Destination already exists");
+    mkdir(parentDir(to));
+    data.files[to] = data.files[from];
+    delete data.files[from];
+    save(data);
+  }
+
+  function clear() {
+    try {
+      localStorage.removeItem(KEY);
+    } catch {}
+  }
+
+  return { listDir, readFile, writeFile, mkdir, deleteFile, moveFile, clear };
+})();
 
 async function tryGetPackageJsonVersion() {
   try {
@@ -516,6 +666,25 @@ function showVaultModal() {
   vaultDialog.showModal();
 }
 
+async function openDemoVault() {
+  if (state.dirty) {
+    const ok = confirm("You have unsaved changes. Continue without saving?");
+    if (!ok) return;
+  }
+  setStatus("Opening demo vault…");
+  state.rootHandle = null;
+  state.vaultLabel = "Demo (local)";
+  setMode("demo");
+  setAppVersion(state.appVersion || getEmbeddedAppVersion() || (await tryGetPackageJsonVersion()));
+  vaultNameEl.textContent = `Vault: ${state.vaultLabel}`;
+  setVaultUiEnabled(true);
+  resetUiState();
+  await ensureDirLoaded("");
+  renderTree();
+  setStatus("Ready.");
+  if (vaultDialog?.open) vaultDialog.close();
+}
+
 function setVaultUiEnabled(enabled) {
   const on = Boolean(enabled);
   if (searchEl) searchEl.hidden = !on;
@@ -560,8 +729,12 @@ function applyTheme(theme) {
 function setMode(nextMode) {
   state.mode = nextMode;
   selectVaultBtn.disabled = false;
-  selectVaultBtn.textContent = nextMode === "browser" ? "Change local vault" : "Choose local vault";
-  useServerBtn.hidden = nextMode !== "browser";
+  if (nextMode === "browser") selectVaultBtn.textContent = "Change local vault";
+  else if (nextMode === "demo") selectVaultBtn.textContent = "Reset demo vault";
+  else selectVaultBtn.textContent = "Choose local vault";
+
+  useServerBtn.hidden = nextMode !== "browser" && nextMode !== "demo";
+  useServerBtn.textContent = nextMode === "demo" ? "Exit demo" : "Disconnect";
 }
 
 function setDirty(isDirty) {
@@ -662,23 +835,27 @@ async function mkdirBrowser(dirRel) {
 
 async function listDir(dirRel) {
   const d = normalizeDir(dirRel);
+  if (state.mode === "demo") return demoVaultStore.listDir(d);
   if (state.mode === "browser") return await listDirBrowser(d);
   const data = await apiGet(`/api/list?dir=${encodeURIComponent(d)}`);
   return data.entries;
 }
 
 async function readFile(rel) {
+  if (state.mode === "demo") return demoVaultStore.readFile(rel);
   if (state.mode === "browser") return await readFileBrowser(rel);
   const data = await apiGet(`/api/read?path=${encodeURIComponent(rel)}`);
   return data.content;
 }
 
 async function writeFile(rel, content) {
+  if (state.mode === "demo") return demoVaultStore.writeFile(rel, content);
   if (state.mode === "browser") return await writeFileBrowser(rel, content);
   await apiSend("PUT", "/api/write", { path: rel, content });
 }
 
 async function mkdir(rel) {
+  if (state.mode === "demo") return demoVaultStore.mkdir(rel);
   if (state.mode === "browser") return await mkdirBrowser(rel);
   await apiSend("POST", "/api/mkdir", { path: rel });
 }
@@ -721,6 +898,10 @@ async function deleteFileBrowser(fileRel) {
 }
 
 async function deleteFilePath(fileRel) {
+  if (state.mode === "demo") {
+    demoVaultStore.deleteFile(fileRel);
+    return;
+  }
   if (state.mode === "browser") {
     await deleteFileBrowser(fileRel);
     return;
@@ -730,6 +911,10 @@ async function deleteFilePath(fileRel) {
 
 async function moveFilePath(fromRel, toRel) {
   if (fromRel === toRel) return;
+  if (state.mode === "demo") {
+    demoVaultStore.moveFile(fromRel, toRel);
+    return;
+  }
   if (state.mode === "browser") {
     const exists = await pathExistsBrowser(toRel);
     if (exists) throw new Error("Destination already exists");
@@ -1252,6 +1437,11 @@ async function restoreLocalVaultFromStorage() {
 
 selectVaultBtn.addEventListener("click", async () => {
   try {
+    if (state.mode === "demo") {
+      demoVaultStore.clear();
+      await openDemoVault();
+      return;
+    }
     await selectLocalVault();
   } catch (err) {
     setStatus(`Error: ${err.message}`);
@@ -1308,6 +1498,16 @@ if (vaultChooseBtn) {
     try {
       await selectLocalVault();
       if (vaultDialog?.open) vaultDialog.close();
+    } catch (err) {
+      setStatus(`Error: ${err.message}`);
+    }
+  });
+}
+
+if (vaultDemoBtn) {
+  vaultDemoBtn.addEventListener("click", async () => {
+    try {
+      await openDemoVault();
     } catch (err) {
       setStatus(`Error: ${err.message}`);
     }
