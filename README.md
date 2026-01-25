@@ -139,6 +139,7 @@ The preview is intentionally simple (no external dependencies). It supports:
 
 - Headings (`#` to `####`)
 - Paragraphs
+- Line breaks inside paragraphs (single newline → line break)
 - Bold/italic
 - Inline code and fenced code blocks (```…```)
 - Blockquotes
