@@ -29,6 +29,7 @@ const vaultChooseBtn = document.getElementById("vaultChooseBtn");
 const state = {
   mode: "server", // "server" | "browser"
   vaultLabel: "",
+  appVersion: null,
   rootHandle: null,
   expandedDirs: new Set([""]),
   childrenByDir: new Map(), // dir -> entries[]
@@ -78,6 +79,32 @@ function setAppVersion(version) {
     return;
   }
   appVersionEl.textContent = v.startsWith("v") ? v : `v${v}`;
+}
+
+async function resolveAppVersion() {
+  if (state.appVersion) return state.appVersion;
+
+  // Prefer server-provided version when available.
+  const cfg = await apiGet("/api/config").catch(() => null);
+  const fromCfg = (cfg?.version || "").toString().trim();
+  if (fromCfg) {
+    state.appVersion = fromCfg;
+    return fromCfg;
+  }
+
+  const embedded = getEmbeddedAppVersion();
+  if (embedded) {
+    state.appVersion = embedded;
+    return embedded;
+  }
+
+  const fromPkg = await tryGetPackageJsonVersion();
+  if (fromPkg) {
+    state.appVersion = fromPkg;
+    return fromPkg;
+  }
+
+  return null;
 }
 
 const vaultHandleStore = (() => {
@@ -1160,7 +1187,7 @@ async function selectLocalVault() {
   await vaultHandleStore.set(handle).catch(() => {});
   state.rootHandle = handle;
   state.vaultLabel = handle?.name ? `${handle.name} (local)` : "Local";
-  setAppVersion(getEmbeddedAppVersion());
+  setAppVersion(state.appVersion || getEmbeddedAppVersion() || (await tryGetPackageJsonVersion()));
   setMode("browser");
   vaultNameEl.textContent = state.vaultLabel ? `Vault: ${state.vaultLabel}` : "Vault: (local)";
   setVaultUiEnabled(true);
@@ -1181,7 +1208,9 @@ async function switchToServerMode() {
   setMode("server");
   resetUiState();
   const cfg = await apiGet("/api/config").catch(() => null);
-  setAppVersion(cfg?.version || getEmbeddedAppVersion() || (await tryGetPackageJsonVersion()));
+  state.appVersion = (cfg?.version || "").toString().trim() || state.appVersion;
+  if (!state.appVersion) state.appVersion = getEmbeddedAppVersion() || (await tryGetPackageJsonVersion());
+  setAppVersion(state.appVersion);
   vaultNameEl.textContent = cfg?.vault ? `Vault: ${cfg.vault}` : "";
   if (!cfg?.vault) {
     setVaultUiEnabled(false);
@@ -1209,7 +1238,7 @@ async function restoreLocalVaultFromStorage() {
 
   state.rootHandle = handle;
   state.vaultLabel = handle?.name ? `${handle.name} (local)` : "Local";
-  setAppVersion(getEmbeddedAppVersion());
+  setAppVersion(state.appVersion || getEmbeddedAppVersion() || (await tryGetPackageJsonVersion()));
   setMode("browser");
   vaultNameEl.textContent = state.vaultLabel ? `Vault: ${state.vaultLabel}` : "Vault: (local)";
   setVaultUiEnabled(true);
@@ -1242,7 +1271,9 @@ async function bootstrap() {
   const cfg = await apiGet("/api/config").catch(() => null);
   state.vaultLabel = cfg?.vault ? cfg.vault : "";
   vaultNameEl.textContent = state.vaultLabel ? `Vault: ${state.vaultLabel}` : "";
-  setAppVersion(cfg?.version || getEmbeddedAppVersion() || (await tryGetPackageJsonVersion()));
+  state.appVersion = (cfg?.version || "").toString().trim() || state.appVersion;
+  if (!state.appVersion) state.appVersion = getEmbeddedAppVersion() || (await tryGetPackageJsonVersion());
+  setAppVersion(state.appVersion);
   setMode("server");
 
   const restored = await restoreLocalVaultFromStorage().catch(() => false);
