@@ -107,7 +107,8 @@ async function apiPostJson(url, payload) {
 async function dropboxGetConfig() {
   const cfg = await apiGet("/api/dropbox/oauth/config").catch(() => null);
   const key = (cfg?.appKey || "").toString().trim();
-  return key || null;
+  const redirectUri = (cfg?.redirectUri || "").toString().trim();
+  return { appKey: key || null, redirectUri: redirectUri || null };
 }
 
 function base64Url(bytes) {
@@ -890,9 +891,9 @@ async function openDemoVault() {
 }
 
 async function openDropboxVault() {
-  const appKey = await dropboxGetConfig();
-  if (!appKey) {
-    alert("Dropbox is not configured on this server. Set DROPBOX_APP_KEY and DROPBOX_APP_SECRET.");
+  const cfg = await dropboxGetConfig();
+  if (!cfg?.appKey) {
+    alert("Dropbox is not configured on this server. Set DROPBOX_APP_KEY and DROPBOX_APP_SECRET (and redirect URI).");
     return;
   }
   if (state.dirty) {
@@ -900,7 +901,23 @@ async function openDropboxVault() {
     if (!ok) return;
   }
 
-  const redirectUri = `${window.location.origin}/dropbox-oauth.html`;
+  const redirectUri = cfg.redirectUri || `${window.location.origin}/dropbox-oauth.html`;
+  if (cfg.redirectUri && !redirectUri.startsWith(window.location.origin)) {
+    alert(`Invalid DROPBOX_REDIRECT_URI (must match this origin):\n\n${window.location.origin}`);
+    return;
+  }
+
+  const noticeKey = `dropboxRedirectNotice:${redirectUri}`;
+  if (!localStorage.getItem(noticeKey)) {
+    const ok = confirm(
+      `Dropbox redirect URI must be configured in your Dropbox app settings.\n\nAdd this redirect URI:\n${redirectUri}\n\nContinue?`
+    );
+    if (!ok) return;
+    try {
+      localStorage.setItem(noticeKey, "1");
+    } catch {}
+  }
+
   const oauthState = randomString(16);
   const codeVerifier = randomString(64);
   const codeChallenge = await sha256Base64Url(codeVerifier);
@@ -1959,7 +1976,8 @@ window.addEventListener("message", async (ev) => {
   }
 
   setStatus("Connecting to Dropbox…");
-  const redirectUri = `${window.location.origin}/dropbox-oauth.html`;
+  const cfg = await dropboxGetConfig();
+  const redirectUri = cfg?.redirectUri || `${window.location.origin}/dropbox-oauth.html`;
   const exchanged = await dropboxExchangeCode({ code, codeVerifier, redirectUri });
   const accessToken = (exchanged?.accessToken || "").toString();
   const refreshToken = (exchanged?.refreshToken || "").toString();

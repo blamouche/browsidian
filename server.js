@@ -214,9 +214,10 @@ async function main() {
       if (reqUrl.pathname.startsWith("/api/dropbox/oauth/")) {
         const appKey = (process.env.DROPBOX_APP_KEY || "").toString().trim();
         const appSecret = (process.env.DROPBOX_APP_SECRET || "").toString().trim();
+        const redirectUri = (process.env.DROPBOX_REDIRECT_URI || "").toString().trim();
 
         if (req.method === "GET" && reqUrl.pathname === "/api/dropbox/oauth/config") {
-          return json(res, 200, { appKey: appKey || null });
+          return json(res, 200, { appKey: appKey || null, redirectUri: redirectUri || null });
         }
 
         if (req.method === "POST" && reqUrl.pathname === "/api/dropbox/oauth/exchange") {

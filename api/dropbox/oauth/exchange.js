@@ -18,9 +18,12 @@ module.exports = async function handler(req, res) {
   }
 
   let payload = {};
-  try {
-    payload = JSON.parse(req.body || "{}");
-  } catch {}
+  if (req.body && typeof req.body === "object") payload = req.body;
+  else if (typeof req.body === "string") {
+    try {
+      payload = JSON.parse(req.body || "{}");
+    } catch {}
+  }
 
   const code = payload.code;
   const codeVerifier = payload.codeVerifier;
@@ -67,4 +70,3 @@ module.exports = async function handler(req, res) {
     })
   );
 };
-

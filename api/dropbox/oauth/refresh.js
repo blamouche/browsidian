@@ -18,9 +18,12 @@ module.exports = async function handler(req, res) {
   }
 
   let payload = {};
-  try {
-    payload = JSON.parse(req.body || "{}");
-  } catch {}
+  if (req.body && typeof req.body === "object") payload = req.body;
+  else if (typeof req.body === "string") {
+    try {
+      payload = JSON.parse(req.body || "{}");
+    } catch {}
+  }
 
   const refreshToken = payload.refreshToken;
   if (!refreshToken) {
@@ -56,4 +59,3 @@ module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   res.end(JSON.stringify({ accessToken: data.access_token, expiresIn: data.expires_in, accountId: data.account_id }));
 };
-

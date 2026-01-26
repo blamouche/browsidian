@@ -84,6 +84,7 @@ Server configuration (local or Vercel):
 
 - `DROPBOX_APP_KEY`
 - `DROPBOX_APP_SECRET`
+- `DROPBOX_REDIRECT_URI` (must be whitelisted in your Dropbox app, e.g. `https://your-domain/dropbox-oauth.html`)
 
 ## Contributing (GitHub workflow)
 
