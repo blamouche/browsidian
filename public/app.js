@@ -926,7 +926,7 @@ async function openDropboxVault() {
 
   const authorizeUrl =
     `https://www.dropbox.com/oauth2/authorize` +
-    `?client_id=${encodeURIComponent(appKey)}` +
+    `?client_id=${encodeURIComponent(cfg.appKey)}` +
     `&response_type=code` +
     `&token_access_type=offline` +
     `&code_challenge_method=S256` +
