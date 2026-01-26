@@ -145,6 +145,8 @@ git rebase origin/main
   - When a file is opened, the app shows an HTML preview.
   - Click the preview to switch to Markdown editing.
   - When the editor loses focus, it switches back to preview.
+- **Vault controls**
+  - Change/Disconnect actions are shown next to the current vault name.
 - **Folder selection**
   - Click a folder row (name) to select it.
   - Selecting a folder clears the currently selected file.

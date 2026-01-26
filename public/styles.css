@@ -172,6 +172,64 @@ body {
   font-size: 12px;
 }
 
+.vault-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vault-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  padding: 4px 6px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  background: var(--hover-bg);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.icon-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  border-color: var(--focus-border);
+}
+
+.icon-btn-label {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .icon-btn-label {
+    display: inline;
+  }
+}
+
 .search {
   width: 100%;
   margin-top: 12px;

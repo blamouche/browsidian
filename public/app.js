@@ -1005,14 +1005,25 @@ function applyTheme(theme) {
 function setMode(nextMode) {
   state.mode = nextMode;
   selectVaultBtn.disabled = false;
-  if (nextMode === "browser") selectVaultBtn.textContent = "Change local vault";
-  else if (nextMode === "demo") selectVaultBtn.textContent = "Reset demo vault";
-  else if (nextMode === "dropbox") selectVaultBtn.textContent = "Change Dropbox vault";
-  else selectVaultBtn.textContent = "Choose local vault";
+  const setIconBtn = (btn, { label, title }) => {
+    if (!btn) return;
+    const labelEl = btn.querySelector(".icon-btn-label");
+    if (labelEl) labelEl.textContent = label;
+    else btn.textContent = label;
+    if (typeof title === "string") {
+      btn.title = title;
+      btn.setAttribute("aria-label", title);
+    }
+  };
+
+  if (nextMode === "browser") setIconBtn(selectVaultBtn, { label: "Change", title: "Change local vault" });
+  else if (nextMode === "demo") setIconBtn(selectVaultBtn, { label: "Reset", title: "Reset demo vault" });
+  else if (nextMode === "dropbox") setIconBtn(selectVaultBtn, { label: "Change", title: "Change Dropbox vault" });
+  else setIconBtn(selectVaultBtn, { label: "Choose", title: "Choose local vault" });
 
   useServerBtn.hidden = nextMode === "server";
-  if (nextMode === "demo") useServerBtn.textContent = "Exit demo";
-  else useServerBtn.textContent = "Disconnect";
+  if (nextMode === "demo") setIconBtn(useServerBtn, { label: "Exit", title: "Exit demo" });
+  else setIconBtn(useServerBtn, { label: "Disconnect", title: "Disconnect" });
 }
 
 function setDirty(isDirty) {
