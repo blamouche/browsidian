@@ -108,6 +108,26 @@
       </form>
     </dialog>
 
+    <dialog id="dropboxPathDialog" class="dialog">
+      <form method="dialog" class="dialog-form">
+        <div class="dialog-title">Dropbox folder</div>
+        <div class="dialog-body">
+          <div id="dropboxPathBreadcrumb" class="dbx-breadcrumb" aria-label="Dropbox path"></div>
+          <input id="dropboxPathInput" class="dialog-input" placeholder="/Apps/ObsidianVault" />
+          <div class="dialog-help" id="dropboxPathHelp">
+            Select a folder for your vault (this is a Dropbox path, not a local path).
+          </div>
+          <div id="dropboxPathList" class="dbx-list" role="listbox" aria-label="Folders"></div>
+        </div>
+        <div class="dialog-actions">
+          <button id="dropboxPathUpBtn" type="button" class="btn btn-secondary">Up</button>
+          <button id="dropboxPathNewBtn" type="button" class="btn btn-secondary">New folder</button>
+          <button value="cancel" class="btn btn-secondary">Cancel</button>
+          <button id="dropboxPathSelectBtn" value="ok" class="btn btn-primary">Select</button>
+        </div>
+      </form>
+    </dialog>
+
     <div id="contextMenu" class="context-menu" hidden>
       <button id="contextDeleteFile" class="context-item" type="button">Delete file</button>
     </div>

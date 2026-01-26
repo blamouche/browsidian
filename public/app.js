@@ -28,8 +28,17 @@ const vaultChooseBtn = document.getElementById("vaultChooseBtn");
 const vaultDemoBtn = document.getElementById("vaultDemoBtn");
 const vaultDropboxBtn = document.getElementById("vaultDropboxBtn");
 
+const dropboxPathDialog = document.getElementById("dropboxPathDialog");
+const dropboxPathBreadcrumb = document.getElementById("dropboxPathBreadcrumb");
+const dropboxPathInput = document.getElementById("dropboxPathInput");
+const dropboxPathHelp = document.getElementById("dropboxPathHelp");
+const dropboxPathList = document.getElementById("dropboxPathList");
+const dropboxPathUpBtn = document.getElementById("dropboxPathUpBtn");
+const dropboxPathNewBtn = document.getElementById("dropboxPathNewBtn");
+const dropboxPathSelectBtn = document.getElementById("dropboxPathSelectBtn");
+
 const state = {
-  mode: "server", // "server" | "browser" | "demo"
+  mode: "server", // "server" | "browser" | "demo" | "dropbox"
   vaultLabel: "",
   appVersion: null,
   selectedDir: null,
@@ -1457,6 +1466,305 @@ function showPrompt({ title, label, help, placeholder, value }) {
   });
 }
 
+function dropboxDisplayPath(pathStr) {
+  return pathStr ? pathStr : "/";
+}
+
+function dropboxParentPath(pathStr) {
+  const s = normalizeDropboxRootPath(pathStr);
+  if (!s) return "";
+  const idx = s.lastIndexOf("/");
+  if (idx <= 0) return "";
+  return s.slice(0, idx);
+}
+
+function dropboxJoinPath(parentPath, childName) {
+  const base = normalizeDropboxRootPath(parentPath);
+  const name = (childName ?? "").toString().trim().replaceAll("\\", "/");
+  if (!name) return base;
+  if (name.startsWith("/")) return normalizeDropboxRootPath(name);
+  return normalizeDropboxRootPath(base ? `${base}/${name}` : `/${name}`);
+}
+
+function dropboxPathSegments(pathStr) {
+  const s = normalizeDropboxRootPath(pathStr);
+  if (!s) return [];
+  return s.replaceAll(/^\/+/g, "").split("/").filter(Boolean);
+}
+
+function renderDropboxBreadcrumb(currentPath, { onNavigate }) {
+  if (!dropboxPathBreadcrumb) return;
+  const crumbs = [{ label: "/", path: "" }];
+  const segments = dropboxPathSegments(currentPath);
+  let acc = "";
+  for (const seg of segments) {
+    acc = dropboxJoinPath(acc, seg);
+    crumbs.push({ label: seg, path: acc });
+  }
+
+  dropboxPathBreadcrumb.innerHTML = "";
+  for (const c of crumbs) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dbx-crumb";
+    btn.textContent = c.label;
+    btn.addEventListener("click", () => onNavigate?.(c.path));
+    dropboxPathBreadcrumb.appendChild(btn);
+  }
+}
+
+function showDropboxPathPicker({ initialPath } = {}) {
+  if (!dropboxPathDialog || !dropboxPathInput || !dropboxPathList) {
+    return showPrompt({
+      title: "Dropbox vault",
+      label: "Folder path in Dropbox (optional)",
+      help: "Example: /Apps/ObsidianVault (leave empty for root).",
+      placeholder: "/Apps/ObsidianVault",
+      value: initialPath || ""
+    }).then((v) => (v === null ? null : normalizeDropboxRootPath(v)));
+  }
+
+  const form = dropboxPathDialog.querySelector("form");
+  const selectBtn = dropboxPathSelectBtn || dropboxPathDialog.querySelector("#dropboxPathSelectBtn");
+  let currentPath = normalizeDropboxRootPath(initialPath);
+  let selectedPath = currentPath;
+  let chosenPath = null;
+  let busy = false;
+  let lastError = "";
+
+  function setHelp(text) {
+    if (!dropboxPathHelp) return;
+    dropboxPathHelp.textContent = text;
+  }
+
+  function setInput(pathStr) {
+    dropboxPathInput.value = dropboxDisplayPath(pathStr);
+  }
+
+  function setSelected(nextSelected) {
+    selectedPath = normalizeDropboxRootPath(nextSelected);
+    for (const el of dropboxPathList.querySelectorAll(".dbx-item")) {
+      const p = normalizeDropboxRootPath(el.dataset.path || "");
+      el.classList.toggle("selected", p === selectedPath);
+    }
+    setInput(selectedPath);
+  }
+
+  function renderItems(entries) {
+    dropboxPathList.innerHTML = "";
+
+    if (lastError) {
+      const msg = document.createElement("div");
+      msg.className = "dbx-item dbx-muted";
+      msg.textContent = lastError;
+      dropboxPathList.appendChild(msg);
+      return;
+    }
+
+    if (!entries.length) {
+      const msg = document.createElement("div");
+      msg.className = "dbx-item dbx-muted";
+      msg.textContent = "No subfolders.";
+      dropboxPathList.appendChild(msg);
+      return;
+    }
+
+    for (const f of entries) {
+      const item = document.createElement("div");
+      item.className = "dbx-item";
+      item.setAttribute("role", "option");
+      item.dataset.path = f.path;
+
+      const icon = document.createElement("div");
+      icon.className = "dbx-item-icon";
+      icon.textContent = "▸";
+
+      const name = document.createElement("div");
+      name.className = "dbx-item-name";
+      name.textContent = f.name;
+
+      item.appendChild(icon);
+      item.appendChild(name);
+
+      item.addEventListener("click", () => setSelected(f.path));
+      item.addEventListener("dblclick", async () => {
+        if (busy) return;
+        currentPath = normalizeDropboxRootPath(f.path);
+        lastError = "";
+        setInput(currentPath);
+        setSelected(currentPath);
+        await load();
+      });
+
+      dropboxPathList.appendChild(item);
+    }
+
+    setSelected(selectedPath);
+  }
+
+  async function load() {
+    busy = true;
+    setHelp("Loading folders…");
+    if (dropboxPathUpBtn) dropboxPathUpBtn.disabled = currentPath === "";
+    if (dropboxPathNewBtn) dropboxPathNewBtn.disabled = true;
+    dropboxPathList.innerHTML = "";
+
+    try {
+      const data = await dropboxApiJson("list", { path: currentPath });
+      const folders = (data?.entries || [])
+        .filter((e) => e && typeof e === "object" && e[".tag"] === "folder")
+        .map((e) => ({
+          name: (e.name || "").toString(),
+          path: normalizeDropboxRootPath((e.path_display || e.path_lower || "").toString())
+        }))
+        .filter((e) => e.name && typeof e.path === "string")
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+
+      lastError = "";
+      renderDropboxBreadcrumb(currentPath, {
+        onNavigate: async (p) => {
+          if (busy) return;
+          currentPath = normalizeDropboxRootPath(p);
+          lastError = "";
+          setInput(currentPath);
+          setSelected(currentPath);
+          await load();
+        }
+      });
+      renderItems(folders);
+      setHelp("Select a folder for your vault (this is a Dropbox path, not a local path).");
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      lastError = `Error: ${msg}`;
+      renderDropboxBreadcrumb(currentPath, { onNavigate: () => {} });
+      renderItems([]);
+      setHelp("Could not list folders.");
+    } finally {
+      busy = false;
+      if (dropboxPathUpBtn) dropboxPathUpBtn.disabled = currentPath === "";
+      if (dropboxPathNewBtn) dropboxPathNewBtn.disabled = false;
+    }
+  }
+
+  async function ensureFolderExists(targetPath) {
+    try {
+      await dropboxApiJson("list", { path: targetPath });
+      return true;
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      if (targetPath && msg.includes("path/not_found")) {
+        const create = confirm(`Dropbox folder not found:\n${targetPath}\n\nCreate it?`);
+        if (!create) return false;
+        await dropboxApiJson("mkdir", { path: targetPath });
+        await dropboxApiJson("list", { path: targetPath });
+        return true;
+      }
+      alert(`Dropbox folder error:\n${msg}`);
+      return false;
+    }
+  }
+
+  dropboxPathDialog.showModal();
+  renderDropboxBreadcrumb(currentPath, { onNavigate: () => {} });
+  setInput(currentPath);
+  setSelected(currentPath);
+  dropboxPathInput.focus();
+  const len = dropboxPathInput.value.length;
+  dropboxPathInput.setSelectionRange(len, len);
+
+  load().catch(() => {});
+
+  return new Promise((resolve) => {
+    const attemptSelect = async () => {
+      if (busy) return;
+      const raw = dropboxPathInput.value;
+      const target = normalizeDropboxRootPath(raw === "/" ? "" : raw);
+      const ok = await ensureFolderExists(target);
+      if (!ok) return;
+      chosenPath = target;
+      dropboxPathDialog.close("ok");
+    };
+
+    const onUp = async () => {
+      if (busy) return;
+      currentPath = dropboxParentPath(currentPath);
+      lastError = "";
+      setInput(currentPath);
+      setSelected(currentPath);
+      await load();
+    };
+
+    const onNew = async () => {
+      if (busy) return;
+      const name = await showPrompt({
+        title: "New Dropbox folder",
+        label: "Folder name",
+        help: `Create a folder under ${dropboxDisplayPath(currentPath)}`,
+        placeholder: "New folder",
+        value: ""
+      });
+      if (!name) return;
+      const newPath = dropboxJoinPath(currentPath, name);
+      try {
+        await dropboxApiJson("mkdir", { path: newPath });
+        currentPath = normalizeDropboxRootPath(newPath);
+        lastError = "";
+        setInput(currentPath);
+        setSelected(currentPath);
+        await load();
+      } catch (err) {
+        const msg = err && err.message ? err.message : String(err);
+        alert(`Failed to create folder:\n${msg}`);
+      }
+    };
+
+    const onInput = () => {
+      const raw = dropboxPathInput.value;
+      const normalized = normalizeDropboxRootPath(raw === "/" ? "" : raw);
+      selectedPath = normalized;
+    };
+
+    const onSubmit = async (e) => {
+      const submitter = e.submitter;
+      const rv = (submitter?.getAttribute?.("value") || "").toString();
+      if (rv !== "ok") return;
+      e.preventDefault();
+      await attemptSelect();
+    };
+
+    const onKeyDown = async (e) => {
+      if (e.isComposing) return;
+      if (e.key !== "Enter") return;
+      if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+      e.preventDefault();
+      if (selectBtn) {
+        selectBtn.focus();
+      }
+      await attemptSelect();
+    };
+
+    dropboxPathUpBtn?.addEventListener("click", onUp);
+    dropboxPathNewBtn?.addEventListener("click", onNew);
+    dropboxPathInput.addEventListener("input", onInput);
+    dropboxPathInput.addEventListener("keydown", onKeyDown);
+    form?.addEventListener("submit", onSubmit);
+
+    dropboxPathDialog.addEventListener(
+      "close",
+      () => {
+        dropboxPathUpBtn?.removeEventListener("click", onUp);
+        dropboxPathNewBtn?.removeEventListener("click", onNew);
+        dropboxPathInput.removeEventListener("input", onInput);
+        dropboxPathInput.removeEventListener("keydown", onKeyDown);
+        form?.removeEventListener("submit", onSubmit);
+        const ok = dropboxPathDialog.returnValue === "ok";
+        resolve(ok ? chosenPath ?? selectedPath : null);
+      },
+      { once: true }
+    );
+  });
+}
+
 function parentDirOf(pathStr) {
   const s = (pathStr || "").replaceAll(/\/+$/g, "");
   const idx = s.lastIndexOf("/");
@@ -1844,16 +2152,10 @@ selectVaultBtn.addEventListener("click", async () => {
       return;
     }
     if (state.mode === "dropbox") {
-      const rootInput = await showPrompt({
-        title: "Dropbox vault",
-        label: "Folder path in Dropbox (optional)",
-        help: "Example: /Apps/ObsidianVault (leave empty for root).",
-        placeholder: "/Apps/ObsidianVault",
-        value: state.dropbox?.rootPath || ""
-      });
-      if (rootInput === null) return;
       if (!state.dropbox) throw new Error("Not connected to Dropbox");
-      state.dropbox.rootPath = normalizeDropboxRootPath(rootInput);
+      const rootPath = await showDropboxPathPicker({ initialPath: state.dropbox.rootPath || "" });
+      if (rootPath === null) return;
+      state.dropbox.rootPath = normalizeDropboxRootPath(rootPath);
       dropboxAuthStore.set(state.dropbox);
       state.vaultLabel = `Dropbox${state.dropbox.rootPath ? `: ${state.dropbox.rootPath}` : ""}`;
       vaultNameEl.textContent = `Vault: ${state.vaultLabel}`;
@@ -2000,49 +2302,14 @@ window.addEventListener("message", async (ev) => {
       rootPath: ""
     };
 
-    let rootInput;
-    while (true) {
-      try {
-        rootInput = await showPrompt({
-          title: "Dropbox vault",
-          label: "Folder path in Dropbox (optional)",
-          help: "Example: /Apps/ObsidianVault (leave empty for root).",
-          placeholder: "/Apps/ObsidianVault",
-          value: rootInput ?? ""
-        });
-      } catch {
-        rootInput = window.prompt("Folder path in Dropbox (optional). Leave empty for root.", rootInput ?? "");
-      }
-
-      if (rootInput === null) {
-        setStatus("Canceled.");
-        return;
-      }
-
-      const normalizedRoot = normalizeDropboxRootPath(rootInput);
-      state.dropbox.rootPath = normalizedRoot;
-
-      try {
-        await dropboxApiJson("list", { path: normalizedRoot });
-        break;
-      } catch (err) {
-        const msg = err && err.message ? err.message : String(err);
-        if (normalizedRoot && msg.includes("path/not_found")) {
-          const create = confirm(`Dropbox folder not found:\n${normalizedRoot}\n\nCreate it?`);
-          if (!create) continue;
-          try {
-            await dropboxApiJson("mkdir", { path: normalizedRoot });
-            await dropboxApiJson("list", { path: normalizedRoot });
-            break;
-          } catch (createErr) {
-            const createMsg = createErr && createErr.message ? createErr.message : String(createErr);
-            alert(`Failed to create folder:\n${createMsg}`);
-            continue;
-          }
-        }
-        alert(`Dropbox folder error:\n${msg}`);
-      }
+    const chosenRoot = await showDropboxPathPicker({ initialPath: state.dropbox.rootPath || "" });
+    if (chosenRoot === null) {
+      setStatus("Canceled.");
+      state.dropbox = null;
+      dropboxAuthStore.clear();
+      return;
     }
+    state.dropbox.rootPath = normalizeDropboxRootPath(chosenRoot);
 
     dropboxAuthStore.set(state.dropbox);
 

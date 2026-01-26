@@ -705,6 +705,78 @@ body {
   margin-top: 4px;
 }
 
+.dbx-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dbx-crumb {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.dbx-crumb:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.dbx-list {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: auto;
+  max-height: 280px;
+}
+
+.dbx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.dbx-muted {
+  cursor: default;
+  color: var(--muted);
+}
+
+.dbx-item:last-child {
+  border-bottom: none;
+}
+
+.dbx-item:hover {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.dbx-item.selected {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.dbx-item-icon {
+  width: 18px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.dbx-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 900px) {
   .app {
     grid-template-columns: 1fr;

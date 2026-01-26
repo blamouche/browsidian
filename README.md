@@ -79,6 +79,7 @@ The demo opens `Welcome.md` by default.
 ### Dropbox mode
 
 To use a vault stored on Dropbox, click **Connect Dropbox** in the “Open a vault” dialog and follow the OAuth flow.
+Then pick the vault folder using the built-in Dropbox folder navigator (browse subfolders, go up, and optionally create a new folder).
 
 Server configuration (local or Vercel):
 
