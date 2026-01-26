@@ -604,6 +604,10 @@ body {
   color: var(--text);
 }
 
+.accent-heart {
+  color: var(--accent);
+}
+
 .meta-sep {
   opacity: 0.7;
 }
