@@ -57,6 +57,49 @@ function setStatus(msg) {
 const demoVaultStore = (() => {
   const KEY = "demoVaultV1";
   const SEP = "/";
+  const WELCOME_PATH = "Welcome.md";
+  const WELCOME_UPGRADE_MARKER = "# Obsidian Web — Demo Vault";
+
+  function defaultWelcomeMd() {
+    return `# Obsidian Web — Demo Vault
+
+Welcome! This is a **safe, in-browser demo vault** that lets you try the UI without connecting a real folder.
+
+## Why you might like this
+
+- **Fast**: browse, search, create, and edit notes in seconds
+- **Familiar**: Obsidian-style wikilinks like \`[[My note]]\`
+- **Comfortable**: Markdown editor + preview + auto-save
+- **Private**: in Demo mode, everything stays in your browser (stored in \`localStorage\`)
+
+## Quick start (2 minutes)
+
+1. Click **New file**
+2. Type \`My first note\` (we’ll create \`My first note.md\`)
+3. Write some Markdown, then click outside the editor to preview
+4. Create a link: \`[[My first note]]\` or \`[[Another note]]\` and click it in preview
+
+## Tips & shortcuts
+
+- **Enter** confirms the create dialog (file/folder)
+- **Ctrl+S / Cmd+S** saves immediately
+- Auto-save triggers after ~1.2s of inactivity
+- Click a **folder name** to select it (new files/folders will default there)
+- Drag & drop a file onto a folder to move it
+
+## Demo mode vs real vault
+
+Demo mode is great for testing and automation, but it’s not meant for your real notes.
+
+To work with your actual vault:
+
+- Use **Choose local vault** (Chrome / Edge / Brave), or
+- Run the local server with \`OBSIDIAN_VAULT=/path/to/vault npm start\`
+
+---
+
+Have fun exploring Obsidian Web.`;
+  }
 
   function normalize(rel) {
     return (rel || "")
@@ -104,13 +147,21 @@ const demoVaultStore = (() => {
 
   function ensureSeed() {
     const existing = load();
-    if (existing) return existing;
-    const seeded = {
-      files: {
-        "Welcome.md": "# Welcome\n\nThis is a demo vault.\n\n- Create files/folders\n- Edit Markdown\n"
-      },
-      dirs: { "": true }
-    };
+    if (existing) {
+      const files = existing.files || {};
+      const currentWelcome = typeof files[WELCOME_PATH] === "string" ? files[WELCOME_PATH] : "";
+      const isOldWelcome =
+        currentWelcome && !currentWelcome.startsWith(WELCOME_UPGRADE_MARKER) && currentWelcome.startsWith("# Welcome");
+      if (!currentWelcome || isOldWelcome) {
+        existing.files[WELCOME_PATH] = defaultWelcomeMd();
+        save(existing);
+      }
+      if (!existing.dirs || typeof existing.dirs !== "object") existing.dirs = { "": true };
+      if (!existing.dirs[""]) existing.dirs[""] = true;
+      return existing;
+    }
+
+    const seeded = { files: { [WELCOME_PATH]: defaultWelcomeMd() }, dirs: { "": true } };
     save(seeded);
     return seeded;
   }
@@ -686,6 +737,7 @@ async function openDemoVault() {
   resetUiState();
   await ensureDirLoaded("");
   renderTree();
+  await openFile("Welcome.md").catch(() => {});
   setStatus("Ready.");
   if (vaultDialog?.open) vaultDialog.close();
 }

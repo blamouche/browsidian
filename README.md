@@ -72,6 +72,7 @@ Open the app, then click **Choose local vault** and select your vault folder.
 ### Demo mode
 
 If your browser (or an automation agent) cannot use the folder picker, click **Try demo vault** in the “Open a vault” dialog.
+The demo opens `Welcome.md` by default.
 
 ## Contributing (GitHub workflow)
 
