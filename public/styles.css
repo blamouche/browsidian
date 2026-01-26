@@ -398,6 +398,20 @@ body {
   border-bottom-color: rgba(63, 44, 255, 0.35);
 }
 
+[data-theme="light"] .preview table {
+  border-color: rgba(120, 120, 120, 0.22);
+}
+
+[data-theme="light"] .preview th,
+[data-theme="light"] .preview td {
+  border-bottom-color: rgba(120, 120, 120, 0.18);
+  border-right-color: rgba(120, 120, 120, 0.18);
+}
+
+[data-theme="light"] .preview th {
+  background: rgba(120, 120, 120, 0.08);
+}
+
 .preview a:hover {
   border-bottom-color: rgba(180, 166, 255, 0.7);
 }
@@ -469,7 +483,7 @@ body {
   border-collapse: separate;
   border-spacing: 0;
   margin: 0.8em 0;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(200, 200, 200, 0.28);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -477,8 +491,8 @@ body {
 .preview th,
 .preview td {
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(200, 200, 200, 0.22);
+  border-right: 1px solid rgba(200, 200, 200, 0.22);
   vertical-align: top;
 }
 
@@ -494,7 +508,7 @@ body {
 .preview th {
   text-align: left;
   font-weight: 650;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(200, 200, 200, 0.08);
 }
 
 .preview hr {
