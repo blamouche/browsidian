@@ -10,7 +10,7 @@ function getToken(req) {
   return token || null;
 }
 
-function getPayload(req) {
+async function getPayload(req) {
   if (req.body && typeof req.body === "object") return req.body;
   if (typeof req.body === "string") {
     try {
@@ -19,7 +19,23 @@ function getPayload(req) {
       return {};
     }
   }
-  return {};
+
+  // Fallback for runtimes that don't populate req.body.
+  const raw = await new Promise((resolve) => {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 2 * 1024 * 1024) req.destroy();
+    });
+    req.on("end", () => resolve(body));
+    req.on("error", () => resolve(""));
+  });
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
 }
 
 async function callJson({ token, path, payload }) {
@@ -62,4 +78,3 @@ async function uploadText({ token, dropboxPath, content }) {
 }
 
 module.exports = { json, getToken, getPayload, callJson, downloadText, uploadText };
-

@@ -165,7 +165,7 @@ async function dropboxApiJson(path, payload) {
     body: JSON.stringify(payload)
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error_summary || `Dropbox HTTP ${res.status}`);
+  if (!res.ok) throw new Error(data?.error || data?.error_summary || `Dropbox HTTP ${res.status}`);
   return data;
 }
 
