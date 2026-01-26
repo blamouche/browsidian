@@ -15,6 +15,6 @@ module.exports = async function handler(req, res) {
     await callJson({ token, path: "files/move_v2", payload: { from_path: fromPath, to_path: toPath, autorename: false } });
     return json(res, 200, { ok: true });
   } catch (err) {
-    return json(res, 400, { error: err.message || "Dropbox error" });
+    return json(res, 400, { error: err.message || "Dropbox error", dropboxStatus: err.dropboxStatus || null });
   }
 };

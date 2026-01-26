@@ -48,8 +48,18 @@ async function callJson({ token, path, payload }) {
     },
     body: JSON.stringify(payload)
   });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data?.error_summary || `Dropbox HTTP ${r.status}`);
+  const raw = await r.text().catch(() => "");
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {}
+  if (!r.ok) {
+    const msg = data?.error_summary || data?.error || raw || `Dropbox HTTP ${r.status}`;
+    const err = new Error(msg);
+    err.dropboxStatus = r.status;
+    err.dropboxBody = raw;
+    throw err;
+  }
   return data;
 }
 
@@ -58,8 +68,14 @@ async function downloadText({ token, dropboxPath }) {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Dropbox-API-Arg": JSON.stringify({ path: dropboxPath }) }
   });
-  if (!r.ok) throw new Error(`Dropbox HTTP ${r.status}`);
-  return await r.text();
+  const raw = await r.text().catch(() => "");
+  if (!r.ok) {
+    const err = new Error(raw || `Dropbox HTTP ${r.status}`);
+    err.dropboxStatus = r.status;
+    err.dropboxBody = raw;
+    throw err;
+  }
+  return raw;
 }
 
 async function uploadText({ token, dropboxPath, content }) {
@@ -72,8 +88,18 @@ async function uploadText({ token, dropboxPath, content }) {
     },
     body: (content ?? "").toString()
   });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data?.error_summary || `Dropbox HTTP ${r.status}`);
+  const raw = await r.text().catch(() => "");
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {}
+  if (!r.ok) {
+    const msg = data?.error_summary || data?.error || raw || `Dropbox HTTP ${r.status}`;
+    const err = new Error(msg);
+    err.dropboxStatus = r.status;
+    err.dropboxBody = raw;
+    throw err;
+  }
   return data;
 }
 

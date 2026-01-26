@@ -16,6 +16,6 @@ module.exports = async function handler(req, res) {
     });
     return json(res, 200, { entries: data.entries || [] });
   } catch (err) {
-    return json(res, 400, { error: err.message || "Dropbox error" });
+    return json(res, 400, { error: err.message || "Dropbox error", dropboxStatus: err.dropboxStatus || null });
   }
 };

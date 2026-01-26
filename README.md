@@ -91,6 +91,7 @@ Note: Dropbox file operations are proxied through the app backend (`/api/dropbox
 Troubleshooting:
 
 - If Dropbox connect fails with an HTTP error, check the status bar message (it includes the backend error body when available).
+- The Dropbox folder path is a Dropbox path (e.g. `/Apps/ObsidianVault`), not a local path like `/Applications/...`.
 
 ## Contributing (GitHub workflow)
 

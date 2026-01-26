@@ -12,6 +12,6 @@ module.exports = async function handler(req, res) {
     await callJson({ token, path: "files/create_folder_v2", payload: { path, autorename: false } });
     return json(res, 200, { ok: true });
   } catch (err) {
-    return json(res, 400, { error: err.message || "Dropbox error" });
+    return json(res, 400, { error: err.message || "Dropbox error", dropboxStatus: err.dropboxStatus || null });
   }
 };

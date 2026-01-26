@@ -304,8 +304,12 @@ async function main() {
             },
             body: JSON.stringify(payload)
           });
-          const data = await r.json().catch(() => ({}));
-          if (!r.ok) throw new Error(data?.error_summary || `Dropbox HTTP ${r.status}`);
+          const raw = await r.text().catch(() => "");
+          let data = {};
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch {}
+          if (!r.ok) throw new Error(data?.error_summary || data?.error || raw || `Dropbox HTTP ${r.status}`);
           return data;
         };
 
@@ -314,8 +318,9 @@ async function main() {
             method: "POST",
             headers: { Authorization: `Bearer ${token}`, "Dropbox-API-Arg": JSON.stringify({ path: dropboxPath }) }
           });
-          if (!r.ok) throw new Error(`Dropbox HTTP ${r.status}`);
-          return await r.text();
+          const raw = await r.text().catch(() => "");
+          if (!r.ok) throw new Error(raw || `Dropbox HTTP ${r.status}`);
+          return raw;
         };
 
         const uploadText = async (dropboxPath, content) => {
@@ -328,8 +333,12 @@ async function main() {
             },
             body: (content ?? "").toString()
           });
-          const data = await r.json().catch(() => ({}));
-          if (!r.ok) throw new Error(data?.error_summary || `Dropbox HTTP ${r.status}`);
+          const raw = await r.text().catch(() => "");
+          let data = {};
+          try {
+            data = raw ? JSON.parse(raw) : {};
+          } catch {}
+          if (!r.ok) throw new Error(data?.error_summary || data?.error || raw || `Dropbox HTTP ${r.status}`);
           return data;
         };
 
