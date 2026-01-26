@@ -1991,31 +1991,59 @@ window.addEventListener("message", async (ev) => {
 
     if (vaultDialog?.open) vaultDialog.close();
 
-    let rootInput;
-    try {
-      rootInput = await showPrompt({
-        title: "Dropbox vault",
-        label: "Folder path in Dropbox (optional)",
-        help: "Example: /Apps/ObsidianVault (leave empty for root).",
-        placeholder: "/Apps/ObsidianVault",
-        value: ""
-      });
-    } catch {
-      rootInput = window.prompt("Folder path in Dropbox (optional). Leave empty for root.", "");
-    }
-
-    if (rootInput === null) {
-      setStatus("Canceled.");
-      return;
-    }
-
+    // Set a temporary session so we can validate the chosen Dropbox folder.
     state.dropbox = {
       accessToken,
       refreshToken,
       expiresAt: Date.now() + expiresIn * 1000,
       accountId,
-      rootPath: normalizeDropboxRootPath(rootInput)
+      rootPath: ""
     };
+
+    let rootInput;
+    while (true) {
+      try {
+        rootInput = await showPrompt({
+          title: "Dropbox vault",
+          label: "Folder path in Dropbox (optional)",
+          help: "Example: /Apps/ObsidianVault (leave empty for root).",
+          placeholder: "/Apps/ObsidianVault",
+          value: rootInput ?? ""
+        });
+      } catch {
+        rootInput = window.prompt("Folder path in Dropbox (optional). Leave empty for root.", rootInput ?? "");
+      }
+
+      if (rootInput === null) {
+        setStatus("Canceled.");
+        return;
+      }
+
+      const normalizedRoot = normalizeDropboxRootPath(rootInput);
+      state.dropbox.rootPath = normalizedRoot;
+
+      try {
+        await dropboxApiJson("list", { path: normalizedRoot });
+        break;
+      } catch (err) {
+        const msg = err && err.message ? err.message : String(err);
+        if (normalizedRoot && msg.includes("path/not_found")) {
+          const create = confirm(`Dropbox folder not found:\n${normalizedRoot}\n\nCreate it?`);
+          if (!create) continue;
+          try {
+            await dropboxApiJson("mkdir", { path: normalizedRoot });
+            await dropboxApiJson("list", { path: normalizedRoot });
+            break;
+          } catch (createErr) {
+            const createMsg = createErr && createErr.message ? createErr.message : String(createErr);
+            alert(`Failed to create folder:\n${createMsg}`);
+            continue;
+          }
+        }
+        alert(`Dropbox folder error:\n${msg}`);
+      }
+    }
+
     dropboxAuthStore.set(state.dropbox);
 
     setMode("dropbox");

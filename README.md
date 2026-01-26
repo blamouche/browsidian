@@ -92,6 +92,7 @@ Troubleshooting:
 
 - If Dropbox connect fails with an HTTP error, check the status bar message (it includes the backend error body when available).
 - The Dropbox folder path is a Dropbox path (e.g. `/Apps/ObsidianVault`), not a local path like `/Applications/...`.
+- If the folder doesn’t exist, the app can create it for you (optional prompt).
 
 ## Contributing (GitHub workflow)
 
