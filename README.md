@@ -86,6 +86,8 @@ Server configuration (local or Vercel):
 - `DROPBOX_APP_SECRET`
 - `DROPBOX_REDIRECT_URI` (must be whitelisted in your Dropbox app, e.g. `https://your-domain/dropbox-oauth.html`)
 
+Note: Dropbox file operations are proxied through the app backend (`/api/dropbox/files/*`) to avoid browser CORS limitations.
+
 ## Contributing (GitHub workflow)
 
 This project uses a simple GitHub collaboration flow: work on a dedicated branch, then open a Pull Request (PR) to merge into `main`.

@@ -290,6 +290,143 @@ async function main() {
         }
       }
 
+      if (reqUrl.pathname.startsWith("/api/dropbox/files/")) {
+        const token = (req.headers["x-dropbox-access-token"] || "").toString().trim();
+        if (!token) return json(res, 401, { error: "Missing x-dropbox-access-token" });
+
+        const callJson = async (path, payload) => {
+          const r = await fetch(`https://api.dropboxapi.com/2/${path}`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(data?.error_summary || `Dropbox HTTP ${r.status}`);
+          return data;
+        };
+
+        const downloadText = async (dropboxPath) => {
+          const r = await fetch("https://content.dropboxapi.com/2/files/download", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Dropbox-API-Arg": JSON.stringify({ path: dropboxPath }) }
+          });
+          if (!r.ok) throw new Error(`Dropbox HTTP ${r.status}`);
+          return await r.text();
+        };
+
+        const uploadText = async (dropboxPath, content) => {
+          const r = await fetch("https://content.dropboxapi.com/2/files/upload", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/octet-stream",
+              "Dropbox-API-Arg": JSON.stringify({ path: dropboxPath, mode: "overwrite", autorename: false, mute: true })
+            },
+            body: (content ?? "").toString()
+          });
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(data?.error_summary || `Dropbox HTTP ${r.status}`);
+          return data;
+        };
+
+        if (req.method === "POST" && reqUrl.pathname === "/api/dropbox/files/list") {
+          const bodyBuf = await readBody(req, 1024 * 1024);
+          let payload;
+          try {
+            payload = JSON.parse(bodyBuf.toString("utf8") || "{}");
+          } catch {
+            return json(res, 400, { error: "Invalid JSON" });
+          }
+          const p = payload?.path;
+          if (typeof p !== "string") return json(res, 400, { error: "Expected { path }" });
+          const data = await callJson("files/list_folder", {
+            path: p,
+            recursive: false,
+            include_deleted: false,
+            include_non_downloadable_files: false
+          });
+          return json(res, 200, { entries: data.entries || [] });
+        }
+
+        if (req.method === "POST" && reqUrl.pathname === "/api/dropbox/files/read") {
+          const bodyBuf = await readBody(req, 1024 * 1024);
+          let payload;
+          try {
+            payload = JSON.parse(bodyBuf.toString("utf8") || "{}");
+          } catch {
+            return json(res, 400, { error: "Invalid JSON" });
+          }
+          const p = payload?.path;
+          if (typeof p !== "string") return json(res, 400, { error: "Expected { path }" });
+          const content = await downloadText(p);
+          return json(res, 200, { content });
+        }
+
+        if (req.method === "POST" && reqUrl.pathname === "/api/dropbox/files/write") {
+          const bodyBuf = await readBody(req, 10 * 1024 * 1024);
+          let payload;
+          try {
+            payload = JSON.parse(bodyBuf.toString("utf8") || "{}");
+          } catch {
+            return json(res, 400, { error: "Invalid JSON" });
+          }
+          const p = payload?.path;
+          const content = payload?.content;
+          if (typeof p !== "string" || typeof content !== "string") return json(res, 400, { error: "Expected { path, content }" });
+          await uploadText(p, content);
+          return json(res, 200, { ok: true });
+        }
+
+        if (req.method === "POST" && reqUrl.pathname === "/api/dropbox/files/mkdir") {
+          const bodyBuf = await readBody(req, 1024 * 1024);
+          let payload;
+          try {
+            payload = JSON.parse(bodyBuf.toString("utf8") || "{}");
+          } catch {
+            return json(res, 400, { error: "Invalid JSON" });
+          }
+          const p = payload?.path;
+          if (typeof p !== "string") return json(res, 400, { error: "Expected { path }" });
+          await callJson("files/create_folder_v2", { path: p, autorename: false });
+          return json(res, 200, { ok: true });
+        }
+
+        if (req.method === "POST" && reqUrl.pathname === "/api/dropbox/files/move") {
+          const bodyBuf = await readBody(req, 1024 * 1024);
+          let payload;
+          try {
+            payload = JSON.parse(bodyBuf.toString("utf8") || "{}");
+          } catch {
+            return json(res, 400, { error: "Invalid JSON" });
+          }
+          const fromPath = payload?.fromPath;
+          const toPath = payload?.toPath;
+          if (typeof fromPath !== "string" || typeof toPath !== "string") return json(res, 400, { error: "Expected { fromPath, toPath }" });
+          await callJson("files/move_v2", { from_path: fromPath, to_path: toPath, autorename: false });
+          return json(res, 200, { ok: true });
+        }
+
+        if (req.method === "POST" && reqUrl.pathname === "/api/dropbox/files/delete") {
+          const bodyBuf = await readBody(req, 1024 * 1024);
+          let payload;
+          try {
+            payload = JSON.parse(bodyBuf.toString("utf8") || "{}");
+          } catch {
+            return json(res, 400, { error: "Invalid JSON" });
+          }
+          const p = payload?.path;
+          if (typeof p !== "string") return json(res, 400, { error: "Expected { path }" });
+          await callJson("files/delete_v2", { path: p });
+          return json(res, 200, { ok: true });
+        }
+
+        return json(res, 404, { error: "Not found" });
+      }
+
       if (reqUrl.pathname.startsWith("/api/")) {
         if (req.method === "GET" && reqUrl.pathname === "/api/health") {
           return json(res, 200, { ok: true });

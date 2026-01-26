@@ -159,13 +159,9 @@ async function dropboxEnsureAccessToken() {
 
 async function dropboxApiJson(path, payload) {
   const token = await dropboxEnsureAccessToken();
-  const res = await fetch(`https://api.dropboxapi.com/2/${path}`, {
+  const res = await fetch(`/api/dropbox/files/${path}`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      Accept: "application/json"
-    },
+    headers: { "Content-Type": "application/json", "x-dropbox-access-token": token },
     body: JSON.stringify(payload)
   });
   const data = await res.json().catch(() => ({}));
@@ -175,30 +171,25 @@ async function dropboxApiJson(path, payload) {
 
 async function dropboxDownloadText(dropboxPath) {
   const token = await dropboxEnsureAccessToken();
-  const res = await fetch("https://content.dropboxapi.com/2/files/download", {
+  const res = await fetch("/api/dropbox/files/read", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Dropbox-API-Arg": JSON.stringify({ path: dropboxPath })
-    }
+    headers: { "Content-Type": "application/json", "x-dropbox-access-token": token },
+    body: JSON.stringify({ path: dropboxPath })
   });
-  if (!res.ok) throw new Error(`Dropbox HTTP ${res.status}`);
-  return await res.text();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `Dropbox HTTP ${res.status}`);
+  return (data?.content ?? "").toString();
 }
 
 async function dropboxUploadText(dropboxPath, content) {
   const token = await dropboxEnsureAccessToken();
-  const res = await fetch("https://content.dropboxapi.com/2/files/upload", {
+  const res = await fetch("/api/dropbox/files/write", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/octet-stream",
-      "Dropbox-API-Arg": JSON.stringify({ path: dropboxPath, mode: "overwrite", autorename: false, mute: true })
-    },
-    body: (content ?? "").toString()
+    headers: { "Content-Type": "application/json", "x-dropbox-access-token": token },
+    body: JSON.stringify({ path: dropboxPath, content: (content ?? "").toString() })
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error_summary || `Dropbox HTTP ${res.status}`);
+  if (!res.ok) throw new Error(data?.error || `Dropbox HTTP ${res.status}`);
   return data;
 }
 
@@ -1084,12 +1075,7 @@ async function listDirBrowser(dirRel) {
 
 async function listDirDropbox(dirRel) {
   const dbxPath = dropboxPathFor(normalizeDir(dirRel));
-  const data = await dropboxApiJson("files/list_folder", {
-    path: dbxPath,
-    recursive: false,
-    include_deleted: false,
-    include_non_downloadable_files: false
-  });
+  const data = await dropboxApiJson("list", { path: dbxPath });
   const entries = [];
   for (const ent of data.entries || []) {
     const tag = ent[".tag"];
@@ -1136,7 +1122,7 @@ async function mkdirBrowser(dirRel) {
 
 async function mkdirDropbox(dirRel) {
   const dbxPath = dropboxPathFor(normalizeDir(dirRel));
-  await dropboxApiJson("files/create_folder_v2", { path: dbxPath, autorename: false });
+  await dropboxApiJson("mkdir", { path: dbxPath });
 }
 
 async function listDir(dirRel) {
@@ -1214,7 +1200,7 @@ async function deleteFilePath(fileRel) {
   }
   if (state.mode === "dropbox") {
     const dbxPath = dropboxPathFor(fileRel);
-    await dropboxApiJson("files/delete_v2", { path: dbxPath });
+    await dropboxApiJson("delete", { path: dbxPath });
     return;
   }
   if (state.mode === "browser") {
@@ -1233,7 +1219,7 @@ async function moveFilePath(fromRel, toRel) {
   if (state.mode === "dropbox") {
     const fromPath = dropboxPathFor(fromRel);
     const toPath = dropboxPathFor(toRel);
-    await dropboxApiJson("files/move_v2", { from_path: fromPath, to_path: toPath, autorename: false });
+    await dropboxApiJson("move", { fromPath, toPath });
     return;
   }
   if (state.mode === "browser") {
