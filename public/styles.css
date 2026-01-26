@@ -319,7 +319,7 @@ body {
   resize: none;
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: rgba(7, 10, 16, 0.6);
+  background: var(--panel);
   color: var(--text);
   padding: 14px 14px;
   font-family: var(--mono);
@@ -329,7 +329,7 @@ body {
 }
 
 [data-theme="light"] .textarea {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--panel);
 }
 
 .textarea:focus {
@@ -343,13 +343,13 @@ body {
   overflow: auto;
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: rgba(7, 10, 16, 0.35);
+  background: var(--panel);
   padding: 14px 14px;
   outline: none;
 }
 
 [data-theme="light"] .preview {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--panel);
 }
 
 .preview:focus {
