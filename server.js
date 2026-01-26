@@ -211,6 +211,84 @@ async function main() {
       if (!req.url) return text(res, 400, "Bad Request");
       const reqUrl = new URL(req.url, `http://${req.headers.host || "localhost"}`);
 
+      if (reqUrl.pathname.startsWith("/api/dropbox/oauth/")) {
+        const appKey = (process.env.DROPBOX_APP_KEY || "").toString().trim();
+        const appSecret = (process.env.DROPBOX_APP_SECRET || "").toString().trim();
+
+        if (req.method === "GET" && reqUrl.pathname === "/api/dropbox/oauth/config") {
+          return json(res, 200, { appKey: appKey || null });
+        }
+
+        if (req.method === "POST" && reqUrl.pathname === "/api/dropbox/oauth/exchange") {
+          if (!appKey || !appSecret) return json(res, 400, { error: "Dropbox not configured" });
+          const bodyBuf = await readBody(req, 1024 * 1024);
+          let payload;
+          try {
+            payload = JSON.parse(bodyBuf.toString("utf8") || "{}");
+          } catch {
+            return json(res, 400, { error: "Invalid JSON" });
+          }
+          const code = payload?.code;
+          const codeVerifier = payload?.codeVerifier;
+          const redirectUri = payload?.redirectUri;
+          if (!code || !codeVerifier || !redirectUri) {
+            return json(res, 400, { error: "Expected { code, codeVerifier, redirectUri }" });
+          }
+
+          const params = new URLSearchParams();
+          params.set("grant_type", "authorization_code");
+          params.set("code", code);
+          params.set("client_id", appKey);
+          params.set("client_secret", appSecret);
+          params.set("code_verifier", codeVerifier);
+          params.set("redirect_uri", redirectUri);
+
+          const r = await fetch("https://api.dropboxapi.com/oauth2/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: params.toString()
+          });
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) return json(res, 400, { error: data?.error_description || data?.error || "OAuth exchange failed" });
+
+          return json(res, 200, {
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            expiresIn: data.expires_in,
+            accountId: data.account_id
+          });
+        }
+
+        if (req.method === "POST" && reqUrl.pathname === "/api/dropbox/oauth/refresh") {
+          if (!appKey || !appSecret) return json(res, 400, { error: "Dropbox not configured" });
+          const bodyBuf = await readBody(req, 1024 * 1024);
+          let payload;
+          try {
+            payload = JSON.parse(bodyBuf.toString("utf8") || "{}");
+          } catch {
+            return json(res, 400, { error: "Invalid JSON" });
+          }
+          const refreshToken = payload?.refreshToken;
+          if (!refreshToken) return json(res, 400, { error: "Expected { refreshToken }" });
+
+          const params = new URLSearchParams();
+          params.set("grant_type", "refresh_token");
+          params.set("refresh_token", refreshToken);
+          params.set("client_id", appKey);
+          params.set("client_secret", appSecret);
+
+          const r = await fetch("https://api.dropboxapi.com/oauth2/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: params.toString()
+          });
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) return json(res, 400, { error: data?.error_description || data?.error || "OAuth refresh failed" });
+
+          return json(res, 200, { accessToken: data.access_token, expiresIn: data.expires_in, accountId: data.account_id });
+        }
+      }
+
       if (reqUrl.pathname.startsWith("/api/")) {
         if (req.method === "GET" && reqUrl.pathname === "/api/health") {
           return json(res, 200, { ok: true });

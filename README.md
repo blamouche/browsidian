@@ -2,11 +2,12 @@
 
 Obsidian Web is a local web app to browse and edit an Obsidian vault directly in your browser.
 
-It supports three working modes:
+It supports four working modes:
 
 - **Server mode**: a local Node.js server reads/writes files on disk in a configured vault folder.
 - **Browser mode**: the browser accesses a folder you pick (File System Access API) and edits it directly (no vault configured on the server).
 - **Demo mode**: a small in-browser “vault” stored in `localStorage` (useful for agents or browsers without folder picker support).
+- **Dropbox mode**: connect to Dropbox and work on a remote vault (all file operations happen in the cloud).
 
 ## Features
 
@@ -40,6 +41,7 @@ Notes:
 
 - The hosted app cannot access your filesystem in Server mode. Use Browser mode (folder picker) or Demo mode.
 - The hosted app exposes `/api/config` (for the version), but not the vault file APIs.
+- Dropbox mode requires server-side OAuth endpoints and `DROPBOX_APP_KEY`/`DROPBOX_APP_SECRET` env vars.
 
 ## Getting started
 
@@ -73,6 +75,15 @@ Open the app, then click **Choose local vault** and select your vault folder.
 
 If your browser (or an automation agent) cannot use the folder picker, click **Try demo vault** in the “Open a vault” dialog.
 The demo opens `Welcome.md` by default.
+
+### Dropbox mode
+
+To use a vault stored on Dropbox, click **Connect Dropbox** in the “Open a vault” dialog and follow the OAuth flow.
+
+Server configuration (local or Vercel):
+
+- `DROPBOX_APP_KEY`
+- `DROPBOX_APP_SECRET`
 
 ## Contributing (GitHub workflow)
 

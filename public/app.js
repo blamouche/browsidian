@@ -26,6 +26,7 @@ const promptHelp = document.getElementById("promptHelp");
 const vaultDialog = document.getElementById("vaultDialog");
 const vaultChooseBtn = document.getElementById("vaultChooseBtn");
 const vaultDemoBtn = document.getElementById("vaultDemoBtn");
+const vaultDropboxBtn = document.getElementById("vaultDropboxBtn");
 
 const state = {
   mode: "server", // "server" | "browser" | "demo"
@@ -33,6 +34,7 @@ const state = {
   appVersion: null,
   selectedDir: null,
   rootHandle: null,
+  dropbox: null, // { accessToken, refreshToken, expiresAt, accountId, rootPath }
   expandedDirs: new Set([""]),
   childrenByDir: new Map(), // dir -> entries[]
   activeFile: null,
@@ -52,6 +54,151 @@ const AUTOSAVE_DELAY_MS = 1200;
 
 function setStatus(msg) {
   statusEl.textContent = msg;
+}
+
+const dropboxAuthStore = (() => {
+  const KEY = "dropboxAuthV1";
+
+  function get() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function set(auth) {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(auth));
+    } catch {}
+  }
+
+  function clear() {
+    try {
+      localStorage.removeItem(KEY);
+    } catch {}
+  }
+
+  return { get, set, clear };
+})();
+
+function normalizeDropboxRootPath(input) {
+  const s = (input ?? "").toString().trim();
+  if (!s || s === "/") return "";
+  const cleaned = s.replaceAll("\\", "/").replaceAll(/\/+$/g, "");
+  return cleaned.startsWith("/") ? cleaned : `/${cleaned}`;
+}
+
+function dropboxPathFor(relPath) {
+  const rel = (relPath ?? "").toString().replaceAll("\\", "/").replaceAll(/^\/+/g, "");
+  const root = state.dropbox?.rootPath || "";
+  if (!root) return rel ? `/${rel}` : "";
+  return rel ? `${root}/${rel}` : root;
+}
+
+async function apiPostJson(url, payload) {
+  return await apiSend("POST", url, payload);
+}
+
+async function dropboxGetConfig() {
+  const cfg = await apiGet("/api/dropbox/oauth/config").catch(() => null);
+  const key = (cfg?.appKey || "").toString().trim();
+  return key || null;
+}
+
+function base64Url(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 1) s += String.fromCharCode(bytes[i]);
+  const b64 = btoa(s).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+  return b64;
+}
+
+async function sha256Base64Url(input) {
+  const data = new TextEncoder().encode(input);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return base64Url(new Uint8Array(hash));
+}
+
+function randomString(len = 64) {
+  const bytes = new Uint8Array(len);
+  crypto.getRandomValues(bytes);
+  return base64Url(bytes);
+}
+
+async function dropboxExchangeCode({ code, codeVerifier, redirectUri }) {
+  const data = await apiPostJson("/api/dropbox/oauth/exchange", { code, codeVerifier, redirectUri });
+  return data;
+}
+
+async function dropboxRefresh({ refreshToken }) {
+  const data = await apiPostJson("/api/dropbox/oauth/refresh", { refreshToken });
+  return data;
+}
+
+async function dropboxEnsureAccessToken() {
+  if (!state.dropbox) throw new Error("Not connected to Dropbox");
+  const now = Date.now();
+  const expiresAt = Number(state.dropbox.expiresAt || 0);
+  if (expiresAt && now < expiresAt - 30_000) return state.dropbox.accessToken;
+
+  if (!state.dropbox.refreshToken) throw new Error("Dropbox session expired");
+  const refreshed = await dropboxRefresh({ refreshToken: state.dropbox.refreshToken });
+  const token = (refreshed?.accessToken || "").toString();
+  const expiresIn = Number(refreshed?.expiresIn || 0);
+  if (!token || !Number.isFinite(expiresIn)) throw new Error("Failed to refresh Dropbox token");
+  state.dropbox.accessToken = token;
+  state.dropbox.expiresAt = Date.now() + expiresIn * 1000;
+  dropboxAuthStore.set(state.dropbox);
+  return token;
+}
+
+async function dropboxApiJson(path, payload) {
+  const token = await dropboxEnsureAccessToken();
+  const res = await fetch(`https://api.dropboxapi.com/2/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error_summary || `Dropbox HTTP ${res.status}`);
+  return data;
+}
+
+async function dropboxDownloadText(dropboxPath) {
+  const token = await dropboxEnsureAccessToken();
+  const res = await fetch("https://content.dropboxapi.com/2/files/download", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Dropbox-API-Arg": JSON.stringify({ path: dropboxPath })
+    }
+  });
+  if (!res.ok) throw new Error(`Dropbox HTTP ${res.status}`);
+  return await res.text();
+}
+
+async function dropboxUploadText(dropboxPath, content) {
+  const token = await dropboxEnsureAccessToken();
+  const res = await fetch("https://content.dropboxapi.com/2/files/upload", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/octet-stream",
+      "Dropbox-API-Arg": JSON.stringify({ path: dropboxPath, mode: "overwrite", autorename: false, mute: true })
+    },
+    body: (content ?? "").toString()
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error_summary || `Dropbox HTTP ${res.status}`);
+  return data;
 }
 
 const demoVaultStore = (() => {
@@ -742,6 +889,47 @@ async function openDemoVault() {
   if (vaultDialog?.open) vaultDialog.close();
 }
 
+async function openDropboxVault() {
+  const appKey = await dropboxGetConfig();
+  if (!appKey) {
+    alert("Dropbox is not configured on this server. Set DROPBOX_APP_KEY and DROPBOX_APP_SECRET.");
+    return;
+  }
+  if (state.dirty) {
+    const ok = confirm("You have unsaved changes. Continue without saving?");
+    if (!ok) return;
+  }
+
+  const redirectUri = `${window.location.origin}/dropbox-oauth.html`;
+  const oauthState = randomString(16);
+  const codeVerifier = randomString(64);
+  const codeChallenge = await sha256Base64Url(codeVerifier);
+  sessionStorage.setItem("dropboxOauthState", oauthState);
+  sessionStorage.setItem("dropboxCodeVerifier", codeVerifier);
+
+  const authorizeUrl =
+    `https://www.dropbox.com/oauth2/authorize` +
+    `?client_id=${encodeURIComponent(appKey)}` +
+    `&response_type=code` +
+    `&token_access_type=offline` +
+    `&code_challenge_method=S256` +
+    `&code_challenge=${encodeURIComponent(codeChallenge)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&state=${encodeURIComponent(oauthState)}`;
+
+  setStatus("Opening Dropbox auth…");
+  const w = 520;
+  const h = 680;
+  const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - w) / 2));
+  const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - h) / 2));
+  const popup = window.open(authorizeUrl, "dropbox-oauth", `width=${w},height=${h},left=${left},top=${top}`);
+  if (!popup) {
+    alert("Popup blocked. Please allow popups and try again.");
+    setStatus("Popup blocked.");
+    return;
+  }
+}
+
 function setVaultUiEnabled(enabled) {
   const on = Boolean(enabled);
   if (searchEl) searchEl.hidden = !on;
@@ -788,10 +976,12 @@ function setMode(nextMode) {
   selectVaultBtn.disabled = false;
   if (nextMode === "browser") selectVaultBtn.textContent = "Change local vault";
   else if (nextMode === "demo") selectVaultBtn.textContent = "Reset demo vault";
+  else if (nextMode === "dropbox") selectVaultBtn.textContent = "Change Dropbox vault";
   else selectVaultBtn.textContent = "Choose local vault";
 
-  useServerBtn.hidden = nextMode !== "browser" && nextMode !== "demo";
-  useServerBtn.textContent = nextMode === "demo" ? "Exit demo" : "Disconnect";
+  useServerBtn.hidden = nextMode === "server";
+  if (nextMode === "demo") useServerBtn.textContent = "Exit demo";
+  else useServerBtn.textContent = "Disconnect";
 }
 
 function setDirty(isDirty) {
@@ -873,10 +1063,40 @@ async function listDirBrowser(dirRel) {
   return entries;
 }
 
+async function listDirDropbox(dirRel) {
+  const dbxPath = dropboxPathFor(normalizeDir(dirRel));
+  const data = await dropboxApiJson("files/list_folder", {
+    path: dbxPath,
+    recursive: false,
+    include_deleted: false,
+    include_non_downloadable_files: false
+  });
+  const entries = [];
+  for (const ent of data.entries || []) {
+    const tag = ent[".tag"];
+    const name = ent.name;
+    if (shouldIgnoreName(name)) continue;
+    if (tag === "folder") {
+      const relPath = joinPath(normalizeDir(dirRel), name);
+      entries.push({ name, path: relPath, type: "dir" });
+    } else if (tag === "file") {
+      const relPath = joinPath(normalizeDir(dirRel), name);
+      entries.push({ name, path: relPath, type: "file" });
+    }
+  }
+  entries.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "dir" ? -1 : 1));
+  return entries;
+}
+
 async function readFileBrowser(fileRel) {
   const handle = await getFileHandleByPath(fileRel, { create: false });
   const file = await handle.getFile();
   return await file.text();
+}
+
+async function readFileDropbox(fileRel) {
+  const dbxPath = dropboxPathFor(fileRel);
+  return await dropboxDownloadText(dbxPath);
 }
 
 async function writeFileBrowser(fileRel, content) {
@@ -886,13 +1106,24 @@ async function writeFileBrowser(fileRel, content) {
   await writable.close();
 }
 
+async function writeFileDropbox(fileRel, content) {
+  const dbxPath = dropboxPathFor(fileRel);
+  await dropboxUploadText(dbxPath, content);
+}
+
 async function mkdirBrowser(dirRel) {
   await getDirHandleByPath(dirRel, { create: true });
+}
+
+async function mkdirDropbox(dirRel) {
+  const dbxPath = dropboxPathFor(normalizeDir(dirRel));
+  await dropboxApiJson("files/create_folder_v2", { path: dbxPath, autorename: false });
 }
 
 async function listDir(dirRel) {
   const d = normalizeDir(dirRel);
   if (state.mode === "demo") return demoVaultStore.listDir(d);
+  if (state.mode === "dropbox") return await listDirDropbox(d);
   if (state.mode === "browser") return await listDirBrowser(d);
   const data = await apiGet(`/api/list?dir=${encodeURIComponent(d)}`);
   return data.entries;
@@ -900,6 +1131,7 @@ async function listDir(dirRel) {
 
 async function readFile(rel) {
   if (state.mode === "demo") return demoVaultStore.readFile(rel);
+  if (state.mode === "dropbox") return await readFileDropbox(rel);
   if (state.mode === "browser") return await readFileBrowser(rel);
   const data = await apiGet(`/api/read?path=${encodeURIComponent(rel)}`);
   return data.content;
@@ -907,12 +1139,14 @@ async function readFile(rel) {
 
 async function writeFile(rel, content) {
   if (state.mode === "demo") return demoVaultStore.writeFile(rel, content);
+  if (state.mode === "dropbox") return await writeFileDropbox(rel, content);
   if (state.mode === "browser") return await writeFileBrowser(rel, content);
   await apiSend("PUT", "/api/write", { path: rel, content });
 }
 
 async function mkdir(rel) {
   if (state.mode === "demo") return demoVaultStore.mkdir(rel);
+  if (state.mode === "dropbox") return await mkdirDropbox(rel);
   if (state.mode === "browser") return await mkdirBrowser(rel);
   await apiSend("POST", "/api/mkdir", { path: rel });
 }
@@ -959,6 +1193,11 @@ async function deleteFilePath(fileRel) {
     demoVaultStore.deleteFile(fileRel);
     return;
   }
+  if (state.mode === "dropbox") {
+    const dbxPath = dropboxPathFor(fileRel);
+    await dropboxApiJson("files/delete_v2", { path: dbxPath });
+    return;
+  }
   if (state.mode === "browser") {
     await deleteFileBrowser(fileRel);
     return;
@@ -970,6 +1209,12 @@ async function moveFilePath(fromRel, toRel) {
   if (fromRel === toRel) return;
   if (state.mode === "demo") {
     demoVaultStore.moveFile(fromRel, toRel);
+    return;
+  }
+  if (state.mode === "dropbox") {
+    const fromPath = dropboxPathFor(fromRel);
+    const toPath = dropboxPathFor(toRel);
+    await dropboxApiJson("files/move_v2", { from_path: fromPath, to_path: toPath, autorename: false });
     return;
   }
   if (state.mode === "browser") {
@@ -1581,6 +1826,25 @@ selectVaultBtn.addEventListener("click", async () => {
       await openDemoVault();
       return;
     }
+    if (state.mode === "dropbox") {
+      const rootInput = await showPrompt({
+        title: "Dropbox vault",
+        label: "Folder path in Dropbox (optional)",
+        help: "Example: /Apps/ObsidianVault (leave empty for root).",
+        placeholder: "/Apps/ObsidianVault",
+        value: state.dropbox?.rootPath || ""
+      });
+      if (rootInput === null) return;
+      if (!state.dropbox) throw new Error("Not connected to Dropbox");
+      state.dropbox.rootPath = normalizeDropboxRootPath(rootInput);
+      dropboxAuthStore.set(state.dropbox);
+      state.vaultLabel = `Dropbox${state.dropbox.rootPath ? `: ${state.dropbox.rootPath}` : ""}`;
+      vaultNameEl.textContent = `Vault: ${state.vaultLabel}`;
+      resetUiState();
+      await ensureDirLoaded("");
+      renderTree();
+      return;
+    }
     await selectLocalVault();
   } catch (err) {
     setStatus(`Error: ${err.message}`);
@@ -1589,6 +1853,10 @@ selectVaultBtn.addEventListener("click", async () => {
 
 useServerBtn.addEventListener("click", async () => {
   try {
+    if (state.mode === "dropbox") {
+      state.dropbox = null;
+      dropboxAuthStore.clear();
+    }
     await switchToServerMode();
   } catch (err) {
     setStatus(`Error: ${err.message}`);
@@ -1604,6 +1872,11 @@ async function bootstrap() {
   if (!state.appVersion) state.appVersion = getEmbeddedAppVersion() || (await tryGetPackageJsonVersion());
   setAppVersion(state.appVersion);
   setMode("server");
+
+  const savedDropbox = dropboxAuthStore.get();
+  if (savedDropbox && typeof savedDropbox === "object") {
+    state.dropbox = savedDropbox;
+  }
 
   const restored = await restoreLocalVaultFromStorage().catch(() => false);
   if (restored) return;
@@ -1652,6 +1925,82 @@ if (vaultDemoBtn) {
     }
   });
 }
+
+if (vaultDropboxBtn) {
+  vaultDropboxBtn.addEventListener("click", async () => {
+    try {
+      await openDropboxVault();
+    } catch (err) {
+      setStatus(`Error: ${err.message}`);
+    }
+  });
+}
+
+window.addEventListener("message", async (ev) => {
+  if (ev.origin !== window.location.origin) return;
+  const data = ev.data || {};
+  if (data.type !== "dropbox-oauth") return;
+  if (data.error) {
+    setStatus(`Dropbox auth error: ${data.errorDescription || data.error}`);
+    return;
+  }
+  const expectedState = sessionStorage.getItem("dropboxOauthState");
+  const codeVerifier = sessionStorage.getItem("dropboxCodeVerifier");
+  sessionStorage.removeItem("dropboxOauthState");
+  sessionStorage.removeItem("dropboxCodeVerifier");
+  if (!expectedState || !codeVerifier || data.state !== expectedState) {
+    setStatus("Dropbox auth failed (state mismatch).");
+    return;
+  }
+  const code = (data.code || "").toString();
+  if (!code) {
+    setStatus("Dropbox auth failed (missing code).");
+    return;
+  }
+
+  setStatus("Connecting to Dropbox…");
+  const redirectUri = `${window.location.origin}/dropbox-oauth.html`;
+  const exchanged = await dropboxExchangeCode({ code, codeVerifier, redirectUri });
+  const accessToken = (exchanged?.accessToken || "").toString();
+  const refreshToken = (exchanged?.refreshToken || "").toString();
+  const expiresIn = Number(exchanged?.expiresIn || 0);
+  const accountId = (exchanged?.accountId || "").toString();
+  if (!accessToken || !refreshToken || !Number.isFinite(expiresIn)) {
+    setStatus("Dropbox auth failed (invalid token response).");
+    return;
+  }
+
+  const rootInput = await showPrompt({
+    title: "Dropbox vault",
+    label: "Folder path in Dropbox (optional)",
+    help: "Example: /Apps/ObsidianVault (leave empty for root).",
+    placeholder: "/Apps/ObsidianVault",
+    value: ""
+  });
+  if (rootInput === null) {
+    setStatus("Canceled.");
+    return;
+  }
+
+  state.dropbox = {
+    accessToken,
+    refreshToken,
+    expiresAt: Date.now() + expiresIn * 1000,
+    accountId,
+    rootPath: normalizeDropboxRootPath(rootInput)
+  };
+  dropboxAuthStore.set(state.dropbox);
+
+  setMode("dropbox");
+  state.vaultLabel = `Dropbox${state.dropbox.rootPath ? `: ${state.dropbox.rootPath}` : ""}`;
+  vaultNameEl.textContent = `Vault: ${state.vaultLabel}`;
+  setVaultUiEnabled(true);
+  resetUiState();
+  await ensureDirLoaded("");
+  renderTree();
+  setStatus("Ready.");
+  if (vaultDialog?.open) vaultDialog.close();
+});
 
 bootstrap().catch((err) => setStatus(`Error: ${err.message}`));
 

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dropbox OAuth</title>
+  </head>
+  <body>
+    <script>
+      (function () {
+        try {
+          var params = new URLSearchParams(window.location.search || "");
+          var code = params.get("code");
+          var state = params.get("state");
+          var error = params.get("error");
+          var errorDescription = params.get("error_description");
+
+          if (window.opener && window.opener !== window) {
+            window.opener.postMessage(
+              { type: "dropbox-oauth", code: code, state: state, error: error, errorDescription: errorDescription },
+              window.location.origin
+            );
+          }
+        } catch {}
+        try {
+          window.close();
+        } catch {}
+      })();
+    </script>
+  </body>
+</html>
+
