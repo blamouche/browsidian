@@ -164,8 +164,12 @@ async function dropboxApiJson(path, payload) {
     headers: { "Content-Type": "application/json", "x-dropbox-access-token": token },
     body: JSON.stringify(payload)
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || data?.error_summary || `Dropbox HTTP ${res.status}`);
+  const raw = await res.text().catch(() => "");
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {}
+  if (!res.ok) throw new Error(data?.error || data?.error_summary || raw || `Dropbox HTTP ${res.status}`);
   return data;
 }
 
@@ -176,8 +180,12 @@ async function dropboxDownloadText(dropboxPath) {
     headers: { "Content-Type": "application/json", "x-dropbox-access-token": token },
     body: JSON.stringify({ path: dropboxPath })
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `Dropbox HTTP ${res.status}`);
+  const raw = await res.text().catch(() => "");
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {}
+  if (!res.ok) throw new Error(data?.error || data?.error_summary || raw || `Dropbox HTTP ${res.status}`);
   return (data?.content ?? "").toString();
 }
 
@@ -188,8 +196,12 @@ async function dropboxUploadText(dropboxPath, content) {
     headers: { "Content-Type": "application/json", "x-dropbox-access-token": token },
     body: JSON.stringify({ path: dropboxPath, content: (content ?? "").toString() })
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `Dropbox HTTP ${res.status}`);
+  const raw = await res.text().catch(() => "");
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {}
+  if (!res.ok) throw new Error(data?.error || data?.error_summary || raw || `Dropbox HTTP ${res.status}`);
   return data;
 }
 

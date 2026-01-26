@@ -88,6 +88,10 @@ Server configuration (local or Vercel):
 
 Note: Dropbox file operations are proxied through the app backend (`/api/dropbox/files/*`) to avoid browser CORS limitations.
 
+Troubleshooting:
+
+- If Dropbox connect fails with an HTTP error, check the status bar message (it includes the backend error body when available).
+
 ## Contributing (GitHub workflow)
 
 This project uses a simple GitHub collaboration flow: work on a dedicated branch, then open a Pull Request (PR) to merge into `main`.
