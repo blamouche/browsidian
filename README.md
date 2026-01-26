@@ -25,6 +25,7 @@ It supports four working modes:
 - Click a folder to select it (used as default destination for new files/folders)
 - Dark / Light mode toggle (persisted in `localStorage`)
 - Subtle, consistent UI styling (dark + light)
+- Flat, subtle SVG icon set (no external dependencies)
 - Footer shows app version (from `/api/config` when available)
 
 ## Requirements

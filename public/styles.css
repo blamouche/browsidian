@@ -71,6 +71,20 @@
   display: none !important;
 }
 
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.icon-svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
 .context-menu {
   position: fixed;
   z-index: 1000;
@@ -186,6 +200,9 @@ body {
 }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   appearance: none;
   border: 1px solid var(--border);
   background: var(--control-bg);
@@ -276,14 +293,15 @@ body {
 
 .tree-item .icon {
   width: 18px;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1;
+  line-height: 0;
 }
 
 .tree-item[data-type="file"] .icon {
-  font-size: 13px;
+  color: color-mix(in srgb, var(--muted) 78%, var(--text));
 }
 
 .tree-item .name {
@@ -564,6 +582,9 @@ body {
 }
 
 .meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
   text-decoration: none;
 }
@@ -572,6 +593,11 @@ body {
   font-family: var(--mono);
   color: var(--text);
   opacity: 0.9;
+}
+
+.meta-icon {
+  width: 15px;
+  height: 15px;
 }
 
 .meta-item:hover {
@@ -637,6 +663,9 @@ body {
 }
 
 .toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   color: var(--muted);
 }

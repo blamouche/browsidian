@@ -1255,8 +1255,8 @@ async function moveFilePath(fromRel, toRel) {
 }
 
 function iconFor(entry) {
-  if (entry.type === "dir") return state.expandedDirs.has(entry.path) ? "▼" : "▶";
-  return "•";
+  if (entry.type === "dir") return state.expandedDirs.has(entry.path) ? "i-chevron-down" : "i-chevron-right";
+  return "i-file-text";
 }
 
 function normalizeDir(dir) {
@@ -1310,7 +1310,13 @@ function renderTree() {
 
       const icon = document.createElement("div");
       icon.className = "icon";
-      icon.textContent = iconFor(entry);
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "icon-svg");
+      svg.setAttribute("aria-hidden", "true");
+      const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      use.setAttribute("href", `#${iconFor(entry)}`);
+      svg.appendChild(use);
+      icon.appendChild(svg);
 
       const name = document.createElement("div");
       name.className = "name";
@@ -1577,7 +1583,13 @@ function showDropboxPathPicker({ initialPath } = {}) {
 
       const icon = document.createElement("div");
       icon.className = "dbx-item-icon";
-      icon.textContent = "▸";
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "icon-svg");
+      svg.setAttribute("aria-hidden", "true");
+      const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      use.setAttribute("href", "#i-chevron-right");
+      svg.appendChild(use);
+      icon.appendChild(svg);
 
       const name = document.createElement("div");
       name.className = "dbx-item-name";
