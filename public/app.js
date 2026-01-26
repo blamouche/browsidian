@@ -945,6 +945,8 @@ async function openDropboxVault() {
     setStatus("Popup blocked.");
     return;
   }
+
+  if (vaultDialog?.open) vaultDialog.close();
 }
 
 function setVaultUiEnabled(enabled) {
@@ -1957,67 +1959,79 @@ window.addEventListener("message", async (ev) => {
   if (ev.origin !== window.location.origin) return;
   const data = ev.data || {};
   if (data.type !== "dropbox-oauth") return;
-  if (data.error) {
-    setStatus(`Dropbox auth error: ${data.errorDescription || data.error}`);
-    return;
-  }
-  const expectedState = sessionStorage.getItem("dropboxOauthState");
-  const codeVerifier = sessionStorage.getItem("dropboxCodeVerifier");
-  sessionStorage.removeItem("dropboxOauthState");
-  sessionStorage.removeItem("dropboxCodeVerifier");
-  if (!expectedState || !codeVerifier || data.state !== expectedState) {
-    setStatus("Dropbox auth failed (state mismatch).");
-    return;
-  }
-  const code = (data.code || "").toString();
-  if (!code) {
-    setStatus("Dropbox auth failed (missing code).");
-    return;
-  }
+  try {
+    if (data.error) {
+      setStatus(`Dropbox auth error: ${data.errorDescription || data.error}`);
+      return;
+    }
+    const expectedState = sessionStorage.getItem("dropboxOauthState");
+    const codeVerifier = sessionStorage.getItem("dropboxCodeVerifier");
+    sessionStorage.removeItem("dropboxOauthState");
+    sessionStorage.removeItem("dropboxCodeVerifier");
+    if (!expectedState || !codeVerifier || data.state !== expectedState) {
+      setStatus("Dropbox auth failed (state mismatch).");
+      return;
+    }
+    const code = (data.code || "").toString();
+    if (!code) {
+      setStatus("Dropbox auth failed (missing code).");
+      return;
+    }
 
-  setStatus("Connecting to Dropbox…");
-  const cfg = await dropboxGetConfig();
-  const redirectUri = cfg?.redirectUri || `${window.location.origin}/dropbox-oauth.html`;
-  const exchanged = await dropboxExchangeCode({ code, codeVerifier, redirectUri });
-  const accessToken = (exchanged?.accessToken || "").toString();
-  const refreshToken = (exchanged?.refreshToken || "").toString();
-  const expiresIn = Number(exchanged?.expiresIn || 0);
-  const accountId = (exchanged?.accountId || "").toString();
-  if (!accessToken || !refreshToken || !Number.isFinite(expiresIn)) {
-    setStatus("Dropbox auth failed (invalid token response).");
-    return;
+    setStatus("Connecting to Dropbox…");
+    const cfg = await dropboxGetConfig();
+    const redirectUri = cfg?.redirectUri || `${window.location.origin}/dropbox-oauth.html`;
+    const exchanged = await dropboxExchangeCode({ code, codeVerifier, redirectUri });
+    const accessToken = (exchanged?.accessToken || "").toString();
+    const refreshToken = (exchanged?.refreshToken || "").toString();
+    const expiresIn = Number(exchanged?.expiresIn || 0);
+    const accountId = (exchanged?.accountId || "").toString();
+    if (!accessToken || !refreshToken || !Number.isFinite(expiresIn)) {
+      setStatus("Dropbox auth failed (invalid token response).");
+      return;
+    }
+
+    if (vaultDialog?.open) vaultDialog.close();
+
+    let rootInput;
+    try {
+      rootInput = await showPrompt({
+        title: "Dropbox vault",
+        label: "Folder path in Dropbox (optional)",
+        help: "Example: /Apps/ObsidianVault (leave empty for root).",
+        placeholder: "/Apps/ObsidianVault",
+        value: ""
+      });
+    } catch {
+      rootInput = window.prompt("Folder path in Dropbox (optional). Leave empty for root.", "");
+    }
+
+    if (rootInput === null) {
+      setStatus("Canceled.");
+      return;
+    }
+
+    state.dropbox = {
+      accessToken,
+      refreshToken,
+      expiresAt: Date.now() + expiresIn * 1000,
+      accountId,
+      rootPath: normalizeDropboxRootPath(rootInput)
+    };
+    dropboxAuthStore.set(state.dropbox);
+
+    setMode("dropbox");
+    state.vaultLabel = `Dropbox${state.dropbox.rootPath ? `: ${state.dropbox.rootPath}` : ""}`;
+    vaultNameEl.textContent = `Vault: ${state.vaultLabel}`;
+    setVaultUiEnabled(true);
+    resetUiState();
+    await ensureDirLoaded("");
+    renderTree();
+    setStatus("Ready.");
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err);
+    setStatus(`Dropbox connect failed: ${msg}`);
   }
-
-  const rootInput = await showPrompt({
-    title: "Dropbox vault",
-    label: "Folder path in Dropbox (optional)",
-    help: "Example: /Apps/ObsidianVault (leave empty for root).",
-    placeholder: "/Apps/ObsidianVault",
-    value: ""
-  });
-  if (rootInput === null) {
-    setStatus("Canceled.");
-    return;
-  }
-
-  state.dropbox = {
-    accessToken,
-    refreshToken,
-    expiresAt: Date.now() + expiresIn * 1000,
-    accountId,
-    rootPath: normalizeDropboxRootPath(rootInput)
-  };
-  dropboxAuthStore.set(state.dropbox);
-
-  setMode("dropbox");
-  state.vaultLabel = `Dropbox${state.dropbox.rootPath ? `: ${state.dropbox.rootPath}` : ""}`;
-  vaultNameEl.textContent = `Vault: ${state.vaultLabel}`;
-  setVaultUiEnabled(true);
-  resetUiState();
-  await ensureDirLoaded("");
-  renderTree();
-  setStatus("Ready.");
-  if (vaultDialog?.open) vaultDialog.close();
 });
 
 bootstrap().catch((err) => setStatus(`Error: ${err.message}`));
