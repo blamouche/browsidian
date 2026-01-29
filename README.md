@@ -1,6 +1,8 @@
-# Obsidian Web
+# Browsidian
 
-Obsidian Web is a local web app to browse and edit an Obsidian vault directly in your browser.
+Browsidian is a local web app to browse and edit an Obsidian vault directly in your browser.
+
+![Screenshot](img/screenshot.png)
 
 It supports four working modes:
 
@@ -26,6 +28,7 @@ It supports four working modes:
 - Dark / Light mode toggle (persisted in `localStorage`)
 - Subtle, consistent UI styling (dark + light)
 - Flat, subtle SVG icon set (no external dependencies)
+- App logo + favicon
 - Footer shows app version (from `/api/config` when available)
 
 ## Requirements

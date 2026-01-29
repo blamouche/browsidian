@@ -218,10 +218,10 @@ const demoVaultStore = (() => {
   const KEY = "demoVaultV1";
   const SEP = "/";
   const WELCOME_PATH = "Welcome.md";
-  const WELCOME_UPGRADE_MARKER = "# Obsidian Web — Demo Vault";
+  const WELCOME_UPGRADE_MARKER = "# Browsidian — Demo Vault";
 
   function defaultWelcomeMd() {
-    return `# Obsidian Web — Demo Vault
+    return `# Browsidian — Demo Vault
 
 Welcome! This is a **safe, in-browser demo vault** that lets you try the UI without connecting a real folder.
 
@@ -258,7 +258,7 @@ To work with your actual vault:
 
 ---
 
-Have fun exploring Obsidian Web.`;
+Have fun exploring Browsidian.`;
   }
 
   function normalize(rel) {
