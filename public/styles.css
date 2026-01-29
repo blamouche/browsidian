@@ -512,6 +512,16 @@ body {
   line-height: 1.55;
 }
 
+.preview img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.8em auto;
+  border-radius: var(--radius-surface);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
 .preview a {
   color: var(--link);
   text-decoration: none;

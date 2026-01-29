@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="img/browsidian.png" alt="Browsidian" width="96" />
+</p>
+
 # Browsidian
 
 Browsidian is a local web app to browse and edit an Obsidian vault directly in your browser.
@@ -175,6 +179,7 @@ The preview is intentionally simple (no external dependencies). It supports:
 - Blockquotes
 - Horizontal rules
 - Links: `[label](https://example.com)`
+- Images: `![alt](/img/browsidian.png)`
 - Tables (header + separator row)
 - Obsidian wikilinks: `[[Note]]`, `[[Note|Alias]]`
 

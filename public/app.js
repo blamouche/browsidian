@@ -223,6 +223,8 @@ const demoVaultStore = (() => {
   function defaultWelcomeMd() {
     return `# Browsidian — Demo Vault
 
+![Browsidian](/img/browsidian.png)
+
 Welcome! This is a **safe, in-browser demo vault** that lets you try the UI without connecting a real folder.
 
 ## Why you might like this
@@ -686,6 +688,13 @@ function renderMarkdownBasic(md) {
     s = escapeHtml(s);
     s = s.replaceAll(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
     s = s.replaceAll(/\*([^*]+)\*/g, "<em>$1</em>");
+    s = s.replaceAll(/!\[([^\]]*)\]\(([^)]+)\)/g, (_m, alt, href) => {
+      const safe = safeHref(href);
+      if (!safe) return "";
+      const srcEsc = escapeHtml(safe);
+      const altEsc = escapeHtml((alt || "").toString());
+      return `<img src="${srcEsc}" alt="${altEsc}" loading="lazy" />`;
+    });
     s = s.replaceAll(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, label, href) => {
       const safe = safeHref(href);
       const labelEsc = label;
