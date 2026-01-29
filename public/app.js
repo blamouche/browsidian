@@ -926,15 +926,22 @@ async function openDropboxVault() {
     return;
   }
 
-  const noticeKey = `dropboxRedirectNotice:${redirectUri}`;
-  if (!localStorage.getItem(noticeKey)) {
-    const ok = confirm(
-      `Dropbox redirect URI must be configured in your Dropbox app settings.\n\nAdd this redirect URI:\n${redirectUri}\n\nContinue?`
-    );
-    if (!ok) return;
-    try {
-      localStorage.setItem(noticeKey, "1");
-    } catch {}
+  const PROD_ORIGIN = "https://browsidian.app.lamouche.fr";
+  const isProdOrigin = window.location.origin === PROD_ORIGIN;
+  const usingFallbackRedirect = !cfg.redirectUri;
+
+  // On prod, don't show the "fallback redirect URI" notice popup.
+  if (!(isProdOrigin && usingFallbackRedirect)) {
+    const noticeKey = `dropboxRedirectNotice:${redirectUri}`;
+    if (!localStorage.getItem(noticeKey)) {
+      const ok = confirm(
+        `Dropbox redirect URI must be configured in your Dropbox app settings.\n\nAdd this redirect URI:\n${redirectUri}\n\nContinue?`
+      );
+      if (!ok) return;
+      try {
+        localStorage.setItem(noticeKey, "1");
+      } catch {}
+    }
   }
 
   const oauthState = randomString(16);
