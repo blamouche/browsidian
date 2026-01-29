@@ -4,25 +4,129 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="app-version" content="__APP_VERSION__" />
-    <title>Obsidian Web</title>
+    <title>Browsidian</title>
+    <link rel="icon" type="image/png" href="/img/browsidian.png" />
+    <link rel="apple-touch-icon" href="/img/browsidian.png" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <!-- Icon library (inline SVG symbols, no external dependencies) -->
+    <svg class="icon-sprite" aria-hidden="true">
+      <symbol id="i-chevron-right" viewBox="0 0 24 24">
+        <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-chevron-down" viewBox="0 0 24 24">
+        <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-file-text" viewBox="0 0 24 24">
+        <path
+          d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path d="M14 2v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M16 13H8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M16 17H8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24">
+        <path
+          d="M3 7a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-save" viewBox="0 0 24 24">
+        <path
+          d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path d="M17 21v-8H7v8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M7 3v5h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-log-out" viewBox="0 0 24 24">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M16 17l5-5-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-github" viewBox="0 0 24 24">
+        <path
+          d="M9 19c-4 1.5-4-2.5-6-3m12 6v-3.5c0-1 .1-1.5-.5-2 2-.2 4-1 4-4.5 0-1-.4-2-1.2-2.8.1-.3.5-1.5-.1-3-1 0-2 .3-3 .9-1-.3-2-.3-3 0-1-.6-2-1-3-.9-.6 1.5-.2 2.7-.1 3C5.4 12 5 13 5 14c0 3.5 2 4.3 4 4.5-.4.4-.5 1-.5 2V22"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24">
+        <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M12 2v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M12 20v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M4.93 4.93l1.41 1.41" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M17.66 17.66l1.41 1.41" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M2 12h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M20 12h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M4.93 19.07l1.41-1.41" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M17.66 6.34l1.41-1.41" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24">
+        <path
+          d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+    </svg>
+
     <div class="app">
       <aside class="sidebar">
         <div class="sidebar-top">
           <div class="brand">
-            <div class="brand-title">Obsidian Web</div>
-            <div class="brand-subtitle" id="vaultName"></div>
-          </div>
-          <div class="actions">
-            <button id="selectVaultBtn" class="btn btn-secondary">Choose local vault</button>
-            <button id="useServerBtn" class="btn btn-secondary" hidden>Disconnect</button>
+            <div class="brand-title">
+              <img class="brand-logo" src="/img/browsidian.png" alt="" aria-hidden="true" />
+              <span>Browsidian</span>
+            </div>
+            <div class="brand-subtitle vault-header">
+              <span id="vaultName" class="vault-name"></span>
+              <div class="vault-actions" aria-label="Vault actions">
+                <button id="selectVaultBtn" class="icon-btn" title="Change vault" aria-label="Change vault">
+                  <svg class="icon-svg" aria-hidden="true"><use href="#i-folder"></use></svg>
+                  <span class="icon-btn-label">Change</span>
+                </button>
+                <button id="useServerBtn" class="icon-btn" title="Disconnect" aria-label="Disconnect" hidden>
+                  <svg class="icon-svg" aria-hidden="true"><use href="#i-log-out"></use></svg>
+                  <span class="icon-btn-label">Disconnect</span>
+                </button>
+              </div>
+            </div>
           </div>
           <input id="search" class="search" placeholder="Search files…" autocomplete="off" hidden />
           <div id="createActions" class="actions" hidden>
-            <button id="newFileBtn" class="btn">New file</button>
-            <button id="newFolderBtn" class="btn btn-secondary">New folder</button>
+            <button id="newFileBtn" class="btn">
+              <svg class="icon-svg" aria-hidden="true"><use href="#i-plus"></use></svg>
+              <span>New file</span>
+            </button>
+            <button id="newFolderBtn" class="btn btn-secondary">
+              <svg class="icon-svg" aria-hidden="true"><use href="#i-folder"></use></svg>
+              <span>New folder</span>
+            </button>
           </div>
         </div>
         <div id="tree" class="tree" role="tree" aria-label="Files"></div>
@@ -36,7 +140,10 @@
             <span id="dirty" class="dirty" title="Unsaved changes" hidden>●</span>
           </div>
           <div class="topbar-actions">
-            <button id="saveBtn" class="btn btn-primary" disabled>Save (Ctrl+S)</button>
+            <button id="saveBtn" class="btn btn-primary" disabled>
+              <svg class="icon-svg" aria-hidden="true"><use href="#i-save"></use></svg>
+              <span>Save (Ctrl+S)</span>
+            </button>
           </div>
         </header>
 
@@ -57,19 +164,32 @@
             <div class="meta">
               <span id="appVersion" class="meta-item" title="Version">v—</span>
               <span class="meta-sep">•</span>
-              <a class="meta-item" href="https://lamouche.fr" target="_blank" rel="noreferrer noopener">made by Benoit</a>
+              <a class="meta-item" href="https://lamouche.fr" target="_blank" rel="noreferrer noopener"
+                >Cooked with <span class="accent-heart" aria-hidden="true">♥</span> by Benoit</a
+              >
               <span class="meta-sep">•</span>
               <a
                 class="meta-item"
                 href="https://github.com/blamouche/obsidian-web"
                 target="_blank"
                 rel="noreferrer noopener"
-              >GitHub</a>
+              >
+                <svg class="icon-svg meta-icon" aria-hidden="true"><use href="#i-github"></use></svg>
+                <span>GitHub</span>
+              </a>
             </div>
-            <label class="toggle" title="Light mode">
+            <span class="meta-sep" aria-hidden="true">•</span>
+            <label class="toggle" title="Dark / Light mode">
               <input id="themeToggle" type="checkbox" />
               <span class="toggle-track" aria-hidden="true"></span>
-              <span class="toggle-label">Light</span>
+              <span class="toggle-side toggle-side-left">
+                <svg class="icon-svg" aria-hidden="true"><use href="#i-moon"></use></svg>
+                <span>Dark</span>
+              </span>
+              <span class="toggle-side toggle-side-right">
+                <svg class="icon-svg" aria-hidden="true"><use href="#i-sun"></use></svg>
+                <span>Light</span>
+              </span>
             </label>
           </div>
         </footer>
@@ -102,7 +222,28 @@
         </div>
         <div class="dialog-actions">
           <button id="vaultDemoBtn" type="button" class="btn btn-secondary">Try demo vault</button>
+          <button id="vaultDropboxBtn" type="button" class="btn btn-secondary">Connect Dropbox</button>
           <button id="vaultChooseBtn" type="button" class="btn btn-primary">Choose local vault</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dropboxPathDialog" class="dialog">
+      <form method="dialog" class="dialog-form">
+        <div class="dialog-title">Dropbox folder</div>
+        <div class="dialog-body">
+          <div id="dropboxPathBreadcrumb" class="dbx-breadcrumb" aria-label="Dropbox path"></div>
+          <input id="dropboxPathInput" class="dialog-input" placeholder="/Apps/ObsidianVault" />
+          <div class="dialog-help" id="dropboxPathHelp">
+            Select a folder for your vault (this is a Dropbox path, not a local path).
+          </div>
+          <div id="dropboxPathList" class="dbx-list" role="listbox" aria-label="Folders"></div>
+        </div>
+        <div class="dialog-actions">
+          <button id="dropboxPathUpBtn" type="button" class="btn btn-secondary">Up</button>
+          <button id="dropboxPathNewBtn" type="button" class="btn btn-secondary">New folder</button>
+          <button value="cancel" class="btn btn-secondary">Cancel</button>
+          <button id="dropboxPathSelectBtn" value="ok" class="btn btn-primary">Select</button>
         </div>
       </form>
     </dialog>

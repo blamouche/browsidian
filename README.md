@@ -1,12 +1,19 @@
-# Obsidian Web
+<p align="center">
+  <img src="img/browsidian.png" alt="Browsidian" width="96" />
+</p>
 
-Obsidian Web is a local web app to browse and edit an Obsidian vault directly in your browser.
+# Browsidian
 
-It supports three working modes:
+Browsidian is a local web app to browse and edit an Obsidian vault directly in your browser.
+
+![Screenshot](img/screenshot.png)
+
+It supports four working modes:
 
 - **Server mode**: a local Node.js server reads/writes files on disk in a configured vault folder.
 - **Browser mode**: the browser accesses a folder you pick (File System Access API) and edits it directly (no vault configured on the server).
 - **Demo mode**: a small in-browser “vault” stored in `localStorage` (useful for agents or browsers without folder picker support).
+- **Dropbox mode**: connect to Dropbox and work on a remote vault (all file operations happen in the cloud).
 
 ## Features
 
@@ -23,6 +30,9 @@ It supports three working modes:
 - Drag & drop a file onto a folder to move it
 - Click a folder to select it (used as default destination for new files/folders)
 - Dark / Light mode toggle (persisted in `localStorage`)
+- Subtle, consistent UI styling (dark + light)
+- Flat, subtle SVG icon set (no external dependencies)
+- App logo + favicon
 - Footer shows app version (from `/api/config` when available)
 
 ## Requirements
@@ -40,6 +50,7 @@ Notes:
 
 - The hosted app cannot access your filesystem in Server mode. Use Browser mode (folder picker) or Demo mode.
 - The hosted app exposes `/api/config` (for the version), but not the vault file APIs.
+- Dropbox mode requires server-side OAuth endpoints and `DROPBOX_APP_KEY`/`DROPBOX_APP_SECRET` env vars.
 
 ## Getting started
 
@@ -73,6 +84,25 @@ Open the app, then click **Choose local vault** and select your vault folder.
 
 If your browser (or an automation agent) cannot use the folder picker, click **Try demo vault** in the “Open a vault” dialog.
 The demo opens `Welcome.md` by default.
+
+### Dropbox mode
+
+To use a vault stored on Dropbox, click **Connect Dropbox** in the “Open a vault” dialog and follow the OAuth flow.
+Then pick the vault folder using the built-in Dropbox folder navigator (browse subfolders, go up, and optionally create a new folder).
+
+Server configuration (local or Vercel):
+
+- `DROPBOX_APP_KEY`
+- `DROPBOX_APP_SECRET`
+- `DROPBOX_REDIRECT_URI` (must be whitelisted in your Dropbox app, e.g. `https://your-domain/dropbox-oauth.html`)
+
+Note: Dropbox file operations are proxied through the app backend (`/api/dropbox/files/*`) to avoid browser CORS limitations.
+
+Troubleshooting:
+
+- If Dropbox connect fails with an HTTP error, check the status bar message (it includes the backend error body when available).
+- The Dropbox folder path is a Dropbox path (e.g. `/Apps/ObsidianVault`), not a local path like `/Applications/...`.
+- If the folder doesn’t exist, the app can create it for you (optional prompt).
 
 ## Contributing (GitHub workflow)
 
@@ -122,6 +152,8 @@ git rebase origin/main
   - When a file is opened, the app shows an HTML preview.
   - Click the preview to switch to Markdown editing.
   - When the editor loses focus, it switches back to preview.
+- **Vault controls**
+  - Change/Disconnect actions are shown next to the current vault name.
 - **Folder selection**
   - Click a folder row (name) to select it.
   - Selecting a folder clears the currently selected file.
@@ -147,6 +179,7 @@ The preview is intentionally simple (no external dependencies). It supports:
 - Blockquotes
 - Horizontal rules
 - Links: `[label](https://example.com)`
+- Images: `![alt](/img/browsidian.png)`
 - Tables (header + separator row)
 - Obsidian wikilinks: `[[Note]]`, `[[Note|Alias]]`
 
