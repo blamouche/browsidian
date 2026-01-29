@@ -223,8 +223,6 @@ const demoVaultStore = (() => {
   function defaultWelcomeMd() {
     return `# Browsidian — Demo Vault
 
-![Browsidian](/img/browsidian.png)
-
 Welcome! This is a **safe, in-browser demo vault** that lets you try the UI without connecting a real folder.
 
 ## Why you might like this
