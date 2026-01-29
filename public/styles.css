@@ -522,6 +522,11 @@ body {
   background: color-mix(in srgb, var(--panel) 92%, transparent);
 }
 
+.preview img[src$="/img/browsidian.png"],
+.preview img[src$="browsidian.png"] {
+  max-width: 150px;
+}
+
 .preview a {
   color: var(--link);
   text-decoration: none;
