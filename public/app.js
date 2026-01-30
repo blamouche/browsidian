@@ -2283,6 +2283,10 @@ if (vaultDemoBtn) {
 }
 
 if (vaultDropboxBtn) {
+  const params = new URL(window.location.href).searchParams;
+  const showDropboxButton = params.has("dropbox");
+  vaultDropboxBtn.hidden = !showDropboxButton;
+
   vaultDropboxBtn.addEventListener("click", async () => {
     try {
       await openDropboxVault();
