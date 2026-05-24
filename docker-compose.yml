@@ -1,0 +1,20 @@
+services:
+  browsidian:
+    build: .
+    image: browsidian:local
+    container_name: browsidian
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      # Server mode: uncomment and bind-mount the vault below
+      # OBSIDIAN_VAULT: /vault
+
+      # Dropbox mode (optional): create an app at https://www.dropbox.com/developers/apps
+      # and set the three values below. Redirect URI must match the one registered
+      # on the Dropbox app's settings page.
+      DROPBOX_APP_KEY: ${DROPBOX_APP_KEY:-}
+      DROPBOX_APP_SECRET: ${DROPBOX_APP_SECRET:-}
+      DROPBOX_REDIRECT_URI: ${DROPBOX_REDIRECT_URI:-}
+    # volumes:
+    #   - /path/to/your/vault:/vault
