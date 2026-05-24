@@ -85,16 +85,48 @@ Open the app, then click **Choose local vault** and select your vault folder.
 If your browser (or an automation agent) cannot use the folder picker, click **Try demo vault** in the “Open a vault” dialog.
 The demo opens `Welcome.md` by default.
 
+### Docker
+
+A `Dockerfile` and `docker-compose.yml` are provided.
+
+Build and run with Compose:
+
+```bash
+docker compose up -d --build
+```
+
+The app will be available at `http://localhost:5173`.
+
+To enable **Server mode** with a real vault, edit `docker-compose.yml`: set the
+`OBSIDIAN_VAULT` environment variable and uncomment the `volumes:` bind-mount
+pointing at your vault on the host.
+
+The image is based on the current Node.js LTS (`node:24-alpine`), runs as the
+non-root `node` user, sets `NODE_ENV=production`, and includes a HEALTHCHECK
+against `/api/config`.
+
 ### Dropbox mode
 
-To use a vault stored on Dropbox, click **Connect Dropbox** in the “Open a vault” dialog and follow the OAuth flow.
-Then pick the vault folder using the built-in Dropbox folder navigator (browse subfolders, go up, and optionally create a new folder).
+To use a vault stored on Dropbox, open the app with ``https://your-domain/?dropbox``, click
+**Connect Dropbox** in the “Open a vault” dialog and follow the OAuth flow.
+Then pick the vault folder using the built-in Dropbox folder navigator
+(browse subfolders, go up, and optionally create a new folder).
 
-Server configuration (local or Vercel):
+Server configuration (local, Docker, or Vercel):
 
 - `DROPBOX_APP_KEY`
 - `DROPBOX_APP_SECRET`
 - `DROPBOX_REDIRECT_URI` (must be whitelisted in your Dropbox app, e.g. `https://your-domain/dropbox-oauth.html`)
+
+When running with Docker Compose, create a `.env` file next to
+`docker-compose.yml` with these three values — the provided compose file
+already wires them through to the container:
+
+```env
+DROPBOX_APP_KEY=your_app_key
+DROPBOX_APP_SECRET=your_app_secret
+DROPBOX_REDIRECT_URI=https://your-domain/dropbox-oauth.html
+```
 
 Note: Dropbox file operations are proxied through the app backend (`/api/dropbox/files/*`) to avoid browser CORS limitations.
 
